@@ -16,6 +16,6 @@ pub mod common;
 pub mod macd;
 
 pub use common::{
-    tulip_ffi_batch_result_free, tulip_ffi_result_free, CBatchResult, CIndicatorError,
-    CIndicatorResult,
+    tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free, CBatchResult,
+    CIndicatorError, CIndicatorResult, CSimdResult,
 };

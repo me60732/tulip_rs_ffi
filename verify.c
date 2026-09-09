@@ -29,6 +29,15 @@ typedef struct {
 
 typedef struct {
     CIndicatorError error;
+    double ***outputs;
+    size_t **output_lens;
+    size_t num_outputs;
+    void **states;
+    size_t num_results;
+} CSimdResult;
+
+typedef struct {
+    CIndicatorError error;
     double **outputs;
     size_t *output_lens;
     size_t num_outputs;
@@ -36,25 +45,42 @@ typedef struct {
 
 extern void tulip_ffi_result_free(CIndicatorResult result);
 extern void tulip_ffi_batch_result_free(CBatchResult result);
+extern void tulip_ffi_simd_result_free(CSimdResult result);
 
 // Tulip-Indicators-style signatures: inputs is an array of pointers (one
 // per input series), options is a flat array -- e.g. compare to
-// https://tulipindicators.org/adosc's `ti_adosc(size, inputs, options, outputs)`.
+// https://tulipindicators.org/adosc's `ti_adosc(data_len, inputs, options, outputs)`.
+// Parameter order: every pointer parameter is immediately followed by the
+// count(s) that describe it.
 extern CIndicatorResult adosc_indicator(
-    size_t size, double const *const *inputs, double const *options,
+    double const *const *inputs, size_t data_len, double const *options,
     bool const *optional_outputs, size_t num_optional);
 extern CBatchResult adosc_batch(
-    void *state, size_t size, double const *const *inputs,
+    void *state, double const *const *inputs, size_t data_len,
     bool const *optional_outputs, size_t num_optional);
 extern void adosc_state_free(void *state);
 
 extern CIndicatorResult macd_indicator(
-    size_t size, double const *const *inputs, double const *options,
+    double const *const *inputs, size_t data_len, double const *options,
     bool const *optional_outputs, size_t num_optional);
 extern CBatchResult macd_batch(
-    void *state, size_t size, double const *const *inputs,
+    void *state, double const *const *inputs, size_t data_len,
     bool const *optional_outputs, size_t num_optional);
 extern void macd_state_free(void *state);
+
+extern CSimdResult adosc_simd_by_assets(
+    double const *const *const *inputs, size_t num_assets, size_t data_len,
+    double const *options, bool const *optional_outputs, size_t num_optional);
+extern CSimdResult adosc_simd_by_options(
+    double const *const *inputs, size_t data_len, double const *const *options,
+    size_t num_option_sets, bool const *optional_outputs, size_t num_optional);
+
+extern CSimdResult macd_simd_by_assets(
+    double const *const *const *inputs, size_t num_assets, size_t data_len,
+    double const *options, bool const *optional_outputs, size_t num_optional);
+extern CSimdResult macd_simd_by_options(
+    double const *const *inputs, size_t data_len, double const *const *options,
+    size_t num_option_sets, bool const *optional_outputs, size_t num_optional);
 
 static void print_row(const char *label, const double *row, size_t len, size_t max_print) {
     printf("  %s (len=%zu): ", label, len);
@@ -92,7 +118,7 @@ int main(void) {
         const double *adosc_inputs[4] = {high, low, close, volume};
         const double adosc_options[2] = {5.0, 20.0};
 
-        CIndicatorResult r = adosc_indicator(initial, adosc_inputs, adosc_options, NULL, 0);
+        CIndicatorResult r = adosc_indicator(adosc_inputs, initial, adosc_options, NULL, 0);
         if (r.error != C_OK) { fprintf(stderr, "adosc_indicator failed: %d\n", r.error); return 1; }
         printf("initial call: num_outputs=%zu\n", r.num_outputs);
         print_row("adosc", r.outputs[0], r.output_lens[0], 5);
@@ -101,7 +127,7 @@ int main(void) {
 
         const double *adosc_inputs_rest[4] = {
             high + initial, low + initial, close + initial, volume + initial};
-        CBatchResult b = adosc_batch(state, rest, adosc_inputs_rest, NULL, 0);
+        CBatchResult b = adosc_batch(state, adosc_inputs_rest, rest, NULL, 0);
         if (b.error != C_OK) { fprintf(stderr, "adosc_batch failed: %d\n", b.error); return 1; }
         printf("batch call: num_outputs=%zu\n", b.num_outputs);
         print_row("adosc (continued)", b.outputs[0], b.output_lens[0], 5);
@@ -115,7 +141,7 @@ int main(void) {
         const double *macd_inputs[1] = {close};
         const double macd_options[3] = {12.0, 26.0, 9.0};
 
-        CIndicatorResult r = macd_indicator(initial, macd_inputs, macd_options, NULL, 0);
+        CIndicatorResult r = macd_indicator(macd_inputs, initial, macd_options, NULL, 0);
         if (r.error != C_OK) { fprintf(stderr, "macd_indicator failed: %d\n", r.error); return 1; }
         printf("initial call: num_outputs=%zu\n", r.num_outputs);
         print_row("macd_line", r.outputs[0], r.output_lens[0], 5);
@@ -125,7 +151,7 @@ int main(void) {
         tulip_ffi_result_free(r);
 
         const double *macd_inputs_rest[1] = {close + initial};
-        CBatchResult b = macd_batch(state, rest, macd_inputs_rest, NULL, 0);
+        CBatchResult b = macd_batch(state, macd_inputs_rest, rest, NULL, 0);
         if (b.error != C_OK) { fprintf(stderr, "macd_batch failed: %d\n", b.error); return 1; }
         printf("batch call: num_outputs=%zu\n", b.num_outputs);
         print_row("macd_line (continued)", b.outputs[0], b.output_lens[0], 5);

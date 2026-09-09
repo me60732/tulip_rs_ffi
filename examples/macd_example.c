@@ -1,7 +1,7 @@
 // MACD (Moving Average Convergence/Divergence) example for tulip_rs_ffi.
 // Mirrors tulip_rs_python/examples/ti_macd_example.py: same sample data,
 // same options, same "compute partial, continue via batch, verify against a
-// full recompute" flow.
+// full recompute" flow, plus SIMD by-assets/by-options demonstrations.
 //
 // Build:
 //   cc -O2 -o macd_example examples/macd_example.c \
@@ -29,15 +29,36 @@ static void print_row(const char *label, const double *row, size_t len) {
     printf("]\n");
 }
 
+static void print_row_head(const char *label, const double *row, size_t len, size_t max_print) {
+    printf("  %-14s: [", label);
+    size_t n = len < max_print ? len : max_print;
+    for (size_t i = 0; i < n; i++) {
+        printf("%.4f", row[i]);
+        if (i + 1 < n) printf(", ");
+    }
+    printf(len > max_print ? ", ...]\n" : "]\n");
+}
+
+static int allclose(const double *a, const double *b, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        double diff = a[i] - b[i];
+        if (diff < 0) diff = -diff;
+        if (diff > 1e-9) return 0;
+    }
+    return 1;
+}
+
 int main(void) {
     const double options[3] = {2.0, 5.0, 9.0}; // short_period, long_period, signal_period
+    double full_macd[TOTAL];
+    size_t full_macd_len = 0;
 
     printf("=== MACD: full calculation (all optional outputs) ===\n");
     {
         const double *inputs[1] = {close};
         bool optional_outputs[2] = {true, true}; // short_ema, long_ema
 
-        CIndicatorResult r = macd_indicator(TOTAL, inputs, options, optional_outputs, 2);
+        CIndicatorResult r = macd_indicator(inputs, TOTAL, options, optional_outputs, 2);
         if (r.error != C_OK) {
             fprintf(stderr, "macd_indicator failed: error=%d\n", r.error);
             return 1;
@@ -49,20 +70,20 @@ int main(void) {
         print_row("short_ema", r.outputs[3], r.output_lens[3]);
         print_row("long_ema", r.outputs[4], r.output_lens[4]);
 
-        // Keep a copy of the mandatory "macd_line" row for later verification.
-        double full_macd[TOTAL];
-        size_t full_macd_len = r.output_lens[0];
+        full_macd_len = r.output_lens[0];
         for (size_t i = 0; i < full_macd_len; i++) full_macd[i] = r.outputs[0][i];
 
         void *unused_state = r.state;
         tulip_ffi_result_free(r);
         macd_state_free(unused_state);
+    }
 
-        printf("\n=== MACD: partial calculation + batch continuation ===\n");
+    printf("\n=== MACD: partial calculation + batch continuation ===\n");
+    {
         const double *partial_inputs[1] = {close};
         bool partial_optional_outputs[2] = {true, true};
         CIndicatorResult pr = macd_indicator(
-            PARTIAL, partial_inputs, options, partial_optional_outputs, 2);
+            partial_inputs, PARTIAL, options, partial_optional_outputs, 2);
         if (pr.error != C_OK) {
             fprintf(stderr, "macd_indicator (partial) failed: error=%d\n", pr.error);
             return 1;
@@ -72,7 +93,7 @@ int main(void) {
         tulip_ffi_result_free(pr); // outputs freed; state kept alive
 
         const double *rest_inputs[1] = {close + PARTIAL};
-        CBatchResult br = macd_batch(state, REST, rest_inputs, NULL, 0);
+        CBatchResult br = macd_batch(state, rest_inputs, REST, NULL, 0);
         if (br.error != C_OK) {
             fprintf(stderr, "macd_batch failed: error=%d\n", br.error);
             return 1;
@@ -99,6 +120,123 @@ int main(void) {
 
         tulip_ffi_batch_result_free(br);
         macd_state_free(state);
+    }
+
+    printf("\n=== MACD: SIMD by assets (N=4) ===\n");
+    {
+        // Asset 1: original data.
+        const double *const asset1[1] = {close};
+
+        // Asset 2: scaled up (+20%).
+        double close_2[TOTAL];
+        for (size_t i = 0; i < TOTAL; i++) close_2[i] = close[i] * 1.2;
+        const double *const asset2[1] = {close_2};
+
+        // Asset 3: shifted up trend.
+        double close_3[TOTAL];
+        for (size_t i = 0; i < TOTAL; i++) close_3[i] = close[i] + 90.0;
+        const double *const asset3[1] = {close_3};
+
+        // Asset 4: downward trend.
+        double close_4[TOTAL];
+        for (size_t i = 0; i < TOTAL; i++) close_4[i] = 100.0 - close[i] * 0.3;
+        const double *const asset4[1] = {close_4};
+
+        const double *const *const simd_inputs[4] = {asset1, asset2, asset3, asset4};
+        bool optional_outputs[2] = {true, true};
+
+        CSimdResult r = macd_simd_by_assets(simd_inputs, 4, TOTAL, options, optional_outputs, 2);
+        if (r.error != C_OK) {
+            fprintf(stderr, "macd_simd_by_assets failed: error=%d\n", r.error);
+            return 1;
+        }
+        printf("num_results=%zu, num_outputs=%zu\n", r.num_results, r.num_outputs);
+        for (size_t i = 0; i < r.num_results; i++) {
+            printf("Asset %zu\n", i + 1);
+            print_row("macd_line", r.outputs[i][0], r.output_lens[i][0]);
+            print_row("signal_line", r.outputs[i][1], r.output_lens[i][1]);
+            print_row("histogram", r.outputs[i][2], r.output_lens[i][2]);
+        }
+
+        printf("\nVerification - calculating each asset individually:\n");
+        int simd_ok = 1;
+        for (size_t i = 0; i < r.num_results; i++) {
+            CIndicatorResult ind = macd_indicator(
+                simd_inputs[i], TOTAL, options, optional_outputs, 2);
+            if (ind.error != C_OK) {
+                fprintf(stderr, "macd_indicator (asset %zu) failed: error=%d\n", i + 1, ind.error);
+                simd_ok = 0;
+                continue;
+            }
+            int match = allclose(r.outputs[i][0], ind.outputs[0], r.output_lens[i][0]);
+            printf("  Asset %zu: %s\n", i + 1, match ? "MATCH" : "MISMATCH");
+            if (!match) simd_ok = 0;
+
+            void *ind_state = ind.state;
+            tulip_ffi_result_free(ind);
+            macd_state_free(ind_state);
+        }
+
+        for (size_t i = 0; i < r.num_results; i++) macd_state_free(r.states[i]);
+        tulip_ffi_simd_result_free(r);
+        printf(simd_ok ? "  ALL MATCH: SIMD by-assets equals individual calculation\n"
+                       : "  MISMATCH detected!\n");
+    }
+
+    printf("\n=== MACD: SIMD by options (N=4) ===\n");
+    {
+        // Tile the base series 20x so longer-period option sets have enough data.
+        #define EXPANDED_LEN (TOTAL * 20)
+        static double close_expanded[EXPANDED_LEN];
+        for (size_t i = 0; i < 20; i++) {
+            for (size_t j = 0; j < TOTAL; j++) {
+                close_expanded[i * TOTAL + j] = close[j];
+            }
+        }
+        const double *expanded_inputs[1] = {close_expanded};
+
+        static const double options_1[3] = {2.0, 5.0, 9.0};
+        static const double options_2[3] = {3.0, 7.0, 11.0};
+        static const double options_3[3] = {4.0, 9.0, 13.0};
+        static const double options_4[3] = {5.0, 10.0, 15.0};
+        const double *const simd_options[4] = {options_1, options_2, options_3, options_4};
+
+        CSimdResult r = macd_simd_by_options(
+            expanded_inputs, EXPANDED_LEN, simd_options, 4, NULL, 0);
+        if (r.error != C_OK) {
+            fprintf(stderr, "macd_simd_by_options failed: error=%d\n", r.error);
+            return 1;
+        }
+        printf("num_results=%zu, num_outputs=%zu\n", r.num_results, r.num_outputs);
+        for (size_t i = 0; i < r.num_results; i++) {
+            char label[32];
+            snprintf(label, sizeof(label), "option set %zu", i + 1);
+            print_row_head(label, r.outputs[i][0], r.output_lens[i][0], 5);
+        }
+
+        printf("\nVerification - calculating each option set individually:\n");
+        int simd_ok = 1;
+        for (size_t i = 0; i < r.num_results; i++) {
+            CIndicatorResult ind = macd_indicator(
+                expanded_inputs, EXPANDED_LEN, simd_options[i], NULL, 0);
+            if (ind.error != C_OK) {
+                fprintf(stderr, "macd_indicator (option set %zu) failed: error=%d\n", i + 1, ind.error);
+                simd_ok = 0;
+                continue;
+            }
+            int match = allclose(r.outputs[i][0], ind.outputs[0], r.output_lens[i][0]);
+            printf("  Option set %zu: %s\n", i + 1, match ? "MATCH" : "MISMATCH");
+            if (!match) simd_ok = 0;
+
+            void *ind_state = ind.state;
+            tulip_ffi_result_free(ind);
+            macd_state_free(ind_state);
+        }
+
+        for (size_t i = 0; i < r.num_results; i++) macd_state_free(r.states[i]);
+        tulip_ffi_simd_result_free(r);
+        printf(simd_ok ? "  ALL MATCH: SIMD by-options equals individual calculation\n"
+                       : "  MISMATCH detected!\n");
     }
 
     return 0;
