@@ -1,7 +1,11 @@
 //! extern "C" wrapper for `adosc`, mirroring the core `tulip_rs` crate's
 //! `Adosc::indicator` / `IndicatorState::batch_indicator` interface with a
-//! Tulip-Indicators-style C calling convention (raw pointers in, `Result`
-//! struct out; output allocation stays inside the indicator function).
+//! Tulip-Indicators-style C calling convention: `inputs` is an array of
+//! `INPUTS` pointers (one per input series, each `size` long, in the same
+//! order as `tulip_rs::indicators::adosc::Adosc::INFO.inputs`), `options`
+//! is a flat array of `OPTIONS` values -- exactly like `ti_adosc`'s
+//! `double const *const *inputs, double const *options`. Output allocation
+//! stays inside the indicator function (never caller-supplied).
 
 use std::os::raw::c_void;
 use std::slice;
@@ -15,34 +19,43 @@ use crate::common::{optional_outputs_slice, pack_outputs, CBatchResult, CIndicat
 /// `adosc_batch()` / `adosc_state_free()`.
 pub type AdoscStateHandle = AdoscState;
 
-/// Runs `adosc` over `size` bars of `high`/`low`/`close`/`volume`, returning
-/// the mandatory `adosc` output plus any requested optional outputs
+/// Reconstructs `[&[f64]; INPUTS]` from a Tulip-style `inputs` array of
+/// pointers.
+///
+/// # Safety
+/// `inputs` must point to exactly `INPUTS` valid, non-null `*const f64`s,
+/// each itself pointing to `size` valid `f64`s.
+unsafe fn read_inputs<'a>(inputs: *const *const f64, size: usize) -> [&'a [f64]; INPUTS] {
+    let ptrs = slice::from_raw_parts(inputs, INPUTS);
+    std::array::from_fn(|i| slice::from_raw_parts(ptrs[i], size))
+}
+
+/// Runs `adosc` over `size` bars.
+///
+/// `inputs` must point to `INPUTS` (4) pointers, in order:
+/// `high, low, close, volume`, each `size` `f64`s long.
+/// `options` must point to `OPTIONS` (2) values: `short_period, long_period`.
+///
+/// Returns the mandatory `adosc` output plus any requested optional outputs
 /// (`short_ema`, `long_ema`, `ad`, in that fixed order) and a fresh
 /// continuation state.
 ///
 /// # Safety
-/// - `high`, `low`, `close`, `volume` must each point to `size` valid `f64`s.
+/// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
+///   `size` valid `f64`s.
+/// - `options` must point to `OPTIONS` valid `f64`s.
 /// - `optional_outputs`, if non-null, must point to `num_optional` valid
 ///   `bool`s (pass null + 0 to request no optional outputs).
 #[no_mangle]
 pub unsafe extern "C" fn adosc_indicator(
-    high: *const f64,
-    low: *const f64,
-    close: *const f64,
-    volume: *const f64,
     size: usize,
-    short_period: f64,
-    long_period: f64,
+    inputs: *const *const f64,
+    options: *const f64,
     optional_outputs: *const bool,
     num_optional: usize,
 ) -> CIndicatorResult {
-    let inputs: [&[f64]; INPUTS] = [
-        slice::from_raw_parts(high, size),
-        slice::from_raw_parts(low, size),
-        slice::from_raw_parts(close, size),
-        slice::from_raw_parts(volume, size),
-    ];
-    let options: [f64; OPTIONS] = [short_period, long_period];
+    let inputs = read_inputs(inputs, size);
+    let options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
     let optional = optional_outputs_slice(optional_outputs, num_optional);
 
     match Adosc::indicator(&inputs, &options, optional) {
@@ -65,20 +78,21 @@ pub unsafe extern "C" fn adosc_indicator(
 /// it's ready for the next call. `state` must have come from
 /// `adosc_indicator()` and not yet have been passed to `adosc_state_free()`.
 ///
+/// `inputs` must point to `INPUTS` (4) pointers (`high, low, close,
+/// volume`), each `size` `f64`s long.
+///
 /// # Safety
 /// - `state` must be a live pointer previously returned by
 ///   `adosc_indicator()`.
-/// - `high`/`low`/`close`/`volume` must each point to `size` valid `f64`s.
+/// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
+///   `size` valid `f64`s.
 /// - `optional_outputs`, if non-null, must point to `num_optional` valid
 ///   `bool`s.
 #[no_mangle]
 pub unsafe extern "C" fn adosc_batch(
     state: *mut c_void,
-    high: *const f64,
-    low: *const f64,
-    close: *const f64,
-    volume: *const f64,
     size: usize,
+    inputs: *const *const f64,
     optional_outputs: *const bool,
     num_optional: usize,
 ) -> CBatchResult {
@@ -87,12 +101,7 @@ pub unsafe extern "C" fn adosc_batch(
     }
     let state = &mut *(state as *mut AdoscStateHandle);
 
-    let inputs: [&[f64]; INPUTS] = [
-        slice::from_raw_parts(high, size),
-        slice::from_raw_parts(low, size),
-        slice::from_raw_parts(close, size),
-        slice::from_raw_parts(volume, size),
-    ];
+    let inputs = read_inputs(inputs, size);
     let optional = optional_outputs_slice(optional_outputs, num_optional);
 
     match state.batch_indicator(&inputs, optional) {
