@@ -1,0 +1,12 @@
+[package]
+name = "tulip_rs_ffi"
+version = "0.1.0"
+edition = "2021"
+description = "Hand-rolled extern \"C\" FFI wrapper around the tulip_rs core indicator library"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[dependencies]
+tulip_rs = { path = "../tulip_rs/tulip_rs", default-features = false, features = ["simd_assets", "simd_options"] }
