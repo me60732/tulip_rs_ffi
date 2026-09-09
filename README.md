@@ -33,14 +33,18 @@ before expanding to full coverage.
   `<name>_indicator()`, get a `CBatchResult` with the next chunk of
   outputs, and the same state pointer keeps working for further calls.
 
-```
-CIndicatorResult adosc_indicator(high, low, close, volume, size,
-                                  short_period, long_period,
-                                  optional_outputs, num_optional);
+```c
+// inputs: array of pointers, one per input series (Tulip-Indicators style,
+// e.g. https://tulipindicators.org/adosc's ti_adosc(size, inputs, options, outputs))
+// options: flat array, one entry per option (e.g. {short_period, long_period})
+CIndicatorResult adosc_indicator(
+    size_t size, double const *const *inputs, double const *options,
+    bool const *optional_outputs, size_t num_optional);
 // -> { error, outputs, output_lens, num_outputs, state }
 
-CBatchResult adosc_batch(state, high, low, close, volume, size,
-                          optional_outputs, num_optional);
+CBatchResult adosc_batch(
+    void *state, size_t size, double const *const *inputs,
+    bool const *optional_outputs, size_t num_optional);
 // -> { error, outputs, output_lens, num_outputs }   (state mutated in place)
 
 tulip_ffi_result_free(result);        // frees outputs only
@@ -76,12 +80,43 @@ cc -O2 -o verify verify.c -L target/release -ltulip_rs_ffi \
 ./verify
 ```
 
+## Examples
+
+`examples/` contains one example per indicator, using the same sample data
+and options as the equivalent `tulip_rs_python/examples/ti_*_example.py`
+script, so output can be sanity-compared across bindings. Each example:
+
+1. Runs a full calculation with all optional outputs requested.
+2. Runs a partial calculation (no optional outputs) to get a state handle.
+3. Feeds the remaining data through `<name>_batch()` to continue streaming.
+4. Verifies the partial+continued result matches a full recompute.
+
+`examples/tulip_rs_ffi.h` holds the shared hand-written prototypes (same
+declarations as the top of `verify.c`) so they aren't duplicated per example.
+
+```bash
+cargo build --release
+cc -O2 -o adosc_example examples/adosc_example.c \
+   -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
+cc -O2 -o macd_example examples/macd_example.c \
+   -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
+
+./adosc_example
+./macd_example
+```
+
+(`info()`/`min_data()` metadata functions -- exposed in the Python/Node/
+Diplomat bindings -- aren't wrapped here yet, so the examples hardcode the
+known input/option counts instead of querying them.)
+
 ## Status / next steps
 
 - [x] `adosc` (4 inputs, 2 options, 1 mandatory + 3 optional outputs)
 - [x] `macd` (1 input, 3 options, 3 mandatory + 2 optional outputs)
+- [x] Examples for `adosc`/`macd` matching the Python binding's example data
 - [ ] Expand to full indicator coverage (candlestick patterns need separate
       handling, same as `tulip_rs_diplomat`)
 - [ ] Auto-generate a C header (e.g. via `cbindgen`) instead of hand-declaring
       prototypes in consuming code
+- [ ] Expose `info()`/`min_data()` metadata functions
 - [ ] Benchmark harness (mirroring `tulip_rs_diplomat/bench/c`)
