@@ -10,9 +10,32 @@
 //! See `common.rs` for the shared `CIndicatorResult`/`CBatchResult` shapes
 //! and memory-ownership rules, and `adosc.rs`/`macd.rs` for the two
 //! indicators currently wrapped.
-
+pub mod ad;
 pub mod adosc;
+pub mod adx;
+pub mod adxr;
+pub mod ao;
+pub mod apo;
+pub mod aroon;
+pub mod aroonosc;
+pub mod atr;
+pub mod avgprice;
+pub mod bbands;
+pub mod bop;
+pub mod ccfisher;
+pub mod cci;
+pub mod chaikinmf;
+pub mod chandelierexit;
+pub mod cmo;
 pub mod common;
+pub mod cvi;
+pub mod cybercycle;
+pub mod dema;
+pub mod di;
+pub mod dm;
+pub mod donchianchannel;
+pub mod dpo;
+pub mod dx;
 pub mod macd;
 
 pub use common::{
