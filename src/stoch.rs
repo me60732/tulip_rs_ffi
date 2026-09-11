@@ -304,9 +304,9 @@ mod tests {
     fn test_stoch_indicator() {
         unsafe {
             let data_len = 60;
-            let high_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1.1).collect();
-            let low_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 0.9).collect();
-            let close_arr: Vec<f64> = build_synthetic_data(data_len);
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] =
                 [high_arr.as_ptr(), low_arr.as_ptr(), close_arr.as_ptr()];
@@ -329,9 +329,9 @@ mod tests {
     fn test_stoch_batch() {
         unsafe {
             let data_len = 60;
-            let high_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1.1).collect();
-            let low_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 0.9).collect();
-            let close_arr: Vec<f64> = build_synthetic_data(data_len);
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] =
                 [high_arr.as_ptr(), low_arr.as_ptr(), close_arr.as_ptr()];
@@ -343,9 +343,9 @@ mod tests {
             let result = stoch_indicator(inputs, data_len, options, ptr::null(), 0);
             assert_eq!(result.error, CIndicatorError::Ok);
 
-            let new_high_arr: Vec<f64> = build_synthetic_data(10).map(|x| x * 1.15).collect();
-            let new_low_arr: Vec<f64> = build_synthetic_data(10).map(|x| x * 0.95).collect();
-            let new_close_arr: Vec<f64> = build_synthetic_data(10);
+            let new_high_arr: Vec<f64> = build_synthetic_data(10, 2);
+            let new_low_arr: Vec<f64> = build_synthetic_data(10, 0);
+            let new_close_arr: Vec<f64> = build_synthetic_data(10, 0);
 
             let new_inputs_arr_ptr: [*const f64; INPUTS] = [
                 new_high_arr.as_ptr(),
@@ -369,21 +369,21 @@ mod tests {
             let num_assets = 4;
 
             // Create inputs for 4 assets
-            let asset0_high: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1.1).collect();
-            let asset0_low: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 0.9).collect();
-            let asset0_close: Vec<f64> = build_synthetic_data(data_len);
+            let asset0_high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let asset0_low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset0_close: Vec<f64> = build_synthetic_data(data_len, 0);
 
-            let asset1_high: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1.5).collect();
-            let asset1_low: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1.3).collect();
-            let asset1_close: Vec<f64> = build_synthetic_data(data_len);
+            let asset1_high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let asset1_low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset1_close: Vec<f64> = build_synthetic_data(data_len, 0);
 
-            let asset2_high: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 2.0).collect();
-            let asset2_low: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1.8).collect();
-            let asset2_close: Vec<f64> = build_synthetic_data(data_len);
+            let asset2_high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let asset2_low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset2_close: Vec<f64> = build_synthetic_data(data_len, 0);
 
-            let asset3_high: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 2.5).collect();
-            let asset3_low: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 2.3).collect();
-            let asset3_close: Vec<f64> = build_synthetic_data(data_len);
+            let asset3_high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let asset3_low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset3_close: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr0: [*const f64; INPUTS] = [
                 asset0_high.as_ptr(),
@@ -432,13 +432,11 @@ mod tests {
     #[test]
     fn test_stoch_simd_by_options() {
         unsafe {
-            const NUM_OPTION_SETS: usize = 2;
-
             let data_len = 60;
 
-            let high_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1.1).collect();
-            let low_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 0.9).collect();
-            let close_arr: Vec<f64> = build_synthetic_data(data_len);
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] =
                 [high_arr.as_ptr(), low_arr.as_ptr(), close_arr.as_ptr()];
@@ -447,11 +445,10 @@ mod tests {
             // Two different option sets
             let options1: [f64; OPTIONS] = [14.0, 3.0, 3.0];
             let options2: [f64; OPTIONS] = [25.0, 5.0, 5.0];
-            let options_arr: [*const f64; NUM_OPTION_SETS] = [options1.as_ptr(), options2.as_ptr()];
+            let options_arr: [*const f64; 2] = [options1.as_ptr(), options2.as_ptr()];
             let options: *const *const f64 = options_arr.as_ptr();
 
-            let result =
-                stoch_simd_by_options(inputs, data_len, options, NUM_OPTION_SETS, ptr::null(), 0);
+            let result = stoch_simd_by_options(inputs, data_len, options, 2, ptr::null(), 0);
 
             assert_eq!(result.error, CIndicatorError::Ok);
             assert_eq!(result.num_results, 2);

@@ -11,8 +11,8 @@ typedef struct {
 
 static void bench_adosc(void *ctx_) {
     AdoscCtx *ctx = ctx_;
-    const double *inputs[4] = {ctx->stock->high, ctx->stock->low, ctx->stock->close, ctx->stock->volume};
-    double opts[2] = {ctx->short_period, ctx->long_period};
+    const double *inputs[ADOSC_INPUTS] = {ctx->stock->high, ctx->stock->low, ctx->stock->close, ctx->stock->volume};
+    double opts[ADOSC_OPTIONS] = {ctx->short_period, ctx->long_period};
     bool optionals[3] = {true, true, true}; // short_ema, long_ema, ad
     struct CIndicatorResult r = adosc_indicator(inputs, ctx->stock->len, opts, optionals, 3);
     if (r.error != C_INDICATOR_ERROR_OK) {
@@ -31,12 +31,12 @@ static void bench_adosc(void *ctx_) {
 static void bench_tulipc_adosc(void *ctx_) {
     AdoscCtx *ctx = ctx_;
     size_t len = ctx->stock->len;
-    double options[2] = {ctx->short_period, ctx->long_period};
+    double options[ADOSC_OPTIONS] = {ctx->short_period, ctx->long_period};
     int start_index = ti_adosc_start(options);
     if (start_index < 0) { fprintf(stderr, "[error] ti_adosc_start returned negative index\n"); exit(1); }
     int output_len = (int) len - start_index;
     double *output = malloc(sizeof(double) * (size_t) output_len);
-    const double *inputs[4] = {ctx->stock->high, ctx->stock->low, ctx->stock->close, ctx->stock->volume};
+    const double *inputs[ADOSC_INPUTS] = {ctx->stock->high, ctx->stock->low, ctx->stock->close, ctx->stock->volume};
     double *outputs[1] = {output};
     int ret = ti_adosc((int) len, inputs, options, outputs);
     if (ret != 0) { fprintf(stderr, "[error] ti_adosc returned %d\n", ret); exit(1); }

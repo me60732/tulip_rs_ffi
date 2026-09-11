@@ -10,7 +10,7 @@ typedef struct {
 
 static void bench_avgprice(void *ctx_) {
     AvgPriceCtx *ctx = ctx_;
-    const double *inputs[4] = {ctx->stock->open, ctx->stock->high, ctx->stock->low, ctx->stock->close};
+    const double *inputs[AVGPRICE_INPUTS] = {ctx->stock->open, ctx->stock->high, ctx->stock->low, ctx->stock->close};
     struct CIndicatorResult r = avgprice_indicator(inputs, ctx->stock->len, NULL, NULL, 0);
     if (r.error != C_INDICATOR_ERROR_OK) {
         fprintf(stderr, "[error] avgprice_indicator failed: %d\n", (int) r.error);
@@ -28,12 +28,11 @@ static void bench_avgprice(void *ctx_) {
 static void bench_tulipc_avgprice(void *ctx_) {
     AvgPriceCtx *ctx = ctx_;
     size_t len = ctx->stock->len;
-    double options[0] = {};
-    int start_index = ti_avgprice_start(options);
+    int start_index = ti_avgprice_start(NULL);
     if (start_index < 0) { fprintf(stderr, "[error] ti_avgprice_start returned negative index\n"); exit(1); }
     int output_len = (int) len - start_index;
     double *output = malloc(sizeof(double) * (size_t) output_len);
-    const double *inputs[4] = {ctx->stock->open, ctx->stock->high, ctx->stock->low, ctx->stock->close};
+    const double *inputs[AVGPRICE_INPUTS] = {ctx->stock->open, ctx->stock->high, ctx->stock->low, ctx->stock->close};
     double *outputs[1] = {output};
     int ret = ti_avgprice((int) len, inputs, options, outputs);
     if (ret != 0) { fprintf(stderr, "[error] ti_avgprice returned %d\n", ret); exit(1); }

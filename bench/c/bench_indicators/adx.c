@@ -10,8 +10,8 @@ typedef struct {
 
 static void bench_adx(void *ctx_) {
     AdxCtx *ctx = ctx_;
-    const double *inputs[3] = {ctx->stock->high, ctx->stock->low, ctx->stock->close};
-    double opts[1] = {ctx->period};
+    const double *inputs[ADX_INPUTS] = {ctx->stock->high, ctx->stock->low, ctx->stock->close};
+    double opts[ADX_OPTIONS] = {ctx->period};
     bool optionals[3] = {true, true, true}; // dx, atr, tr
     struct CIndicatorResult r = adx_indicator(inputs, ctx->stock->len, opts, optionals, 3);
     if (r.error != C_INDICATOR_ERROR_OK) {
@@ -30,12 +30,12 @@ static void bench_adx(void *ctx_) {
 static void bench_tulipc_adx(void *ctx_) {
     AdxCtx *ctx = ctx_;
     size_t len = ctx->stock->len;
-    double options[1] = {ctx->period};
+    double options[ADX_OPTIONS] = {ctx->period};
     int start_index = ti_adx_start(options);
     if (start_index < 0) { fprintf(stderr, "[error] ti_adx_start returned negative index\n"); exit(1); }
     int output_len = (int) len - start_index;
     double *output = malloc(sizeof(double) * (size_t) output_len);
-    const double *inputs[3] = {ctx->stock->high, ctx->stock->low, ctx->stock->close};
+    const double *inputs[ADX_INPUTS] = {ctx->stock->high, ctx->stock->low, ctx->stock->close};
     double *outputs[1] = {output};
     int ret = ti_adx((int) len, inputs, options, outputs);
     if (ret != 0) { fprintf(stderr, "[error] ti_adx returned %d\n", ret); exit(1); }

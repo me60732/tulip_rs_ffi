@@ -349,9 +349,7 @@ mod tests {
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
     };
 
-    unsafe fn build_synthetic_data(len: usize) -> Vec<f64> {
-        (0..len).map(|i| (i as f64 + 1.0) * 100.0).collect()
-    }
+    use crate::common::test::build_synthetic_data;
 
     #[test]
     fn test_hilberttransform_info() {
@@ -376,7 +374,7 @@ mod tests {
             let ss_period = 10.0;
             let hp_period = 20.0;
             let data_len = 80; // Need enough for min_data: roofing + 7
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
             let options_arr = [ss_period, hp_period];
 
             let inputs_ptr = &inputs_arr as *const _ as *const f64;
@@ -407,7 +405,7 @@ mod tests {
             let ss_period = 10.0;
             let hp_period = 20.0;
             let data_len = 80;
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
             let options_arr = [ss_period, hp_period];
 
             let inputs_ptr = &inputs_arr as *const _ as *const f64;
@@ -430,7 +428,7 @@ mod tests {
             let state = result.state;
 
             // Second batch call with additional data
-            let additional_data = build_synthetic_data(30);
+            let additional_data = build_synthetic_data(30, 0);
             let inputs_ptr2 = &additional_data as *const _ as *const f64;
             let inputs2 = [inputs_ptr2];
 
@@ -457,8 +455,8 @@ mod tests {
             let data_len = 80;
             let num_assets = 2;
 
-            let inputs_arr1 = build_synthetic_data(data_len);
-            let inputs_arr2 = build_synthetic_data(data_len);
+            let inputs_arr1 = build_synthetic_data(data_len, 0);
+            let inputs_arr2 = build_synthetic_data(data_len, 0);
             let options_arr = [ss_period, hp_period];
 
             let inputs_ptr1 = &inputs_arr1 as *const _ as *const f64;
@@ -503,7 +501,7 @@ mod tests {
             let data_len = 80;
             let num_option_sets = 2;
 
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
             let options_arr1 = [ss_period1, hp_period1];
             let options_arr2 = [ss_period2, hp_period2];
 

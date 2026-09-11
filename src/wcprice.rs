@@ -259,9 +259,9 @@ mod tests {
     fn test_wcprice_indicator() {
         unsafe {
             let len = 1;
-            let high: Vec<f64> = build_synthetic_data(len);
-            let low: Vec<f64> = build_synthetic_data(len);
-            let close: Vec<f64> = build_synthetic_data(len);
+            let high: Vec<f64> = build_synthetic_data(len, 0);
+            let low: Vec<f64> = build_synthetic_data(len, 0);
+            let close: Vec<f64> = build_synthetic_data(len, 0);
 
             let inputs_ptr: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
             let inputs = inputs_ptr.as_ptr();
@@ -278,9 +278,9 @@ mod tests {
     fn test_wcprice_batch() {
         unsafe {
             let len = 1;
-            let high: Vec<f64> = build_synthetic_data(len);
-            let low: Vec<f64> = build_synthetic_data(len);
-            let close: Vec<f64> = build_synthetic_data(len);
+            let high: Vec<f64> = build_synthetic_data(len, 0);
+            let low: Vec<f64> = build_synthetic_data(len, 0);
+            let close: Vec<f64> = build_synthetic_data(len, 0);
 
             let inputs_ptr: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
             let inputs = inputs_ptr.as_ptr();
@@ -291,9 +291,9 @@ mod tests {
             let state = result.state;
 
             let extra_len = 10;
-            let high_extra: Vec<f64> = build_synthetic_data(extra_len);
-            let low_extra: Vec<f64> = build_synthetic_data(extra_len);
-            let close_extra: Vec<f64> = build_synthetic_data(extra_len);
+            let high_extra: Vec<f64> = build_synthetic_data(extra_len, 0);
+            let low_extra: Vec<f64> = build_synthetic_data(extra_len, 0);
+            let close_extra: Vec<f64> = build_synthetic_data(extra_len, 0);
 
             let inputs_ptr_extra: [*const f64; INPUTS] = [
                 high_extra.as_ptr(),
@@ -317,13 +317,13 @@ mod tests {
         unsafe {
             let len = 1;
 
-            let high1: Vec<f64> = build_synthetic_data(len);
-            let low1: Vec<f64> = build_synthetic_data(len);
-            let close1: Vec<f64> = build_synthetic_data(len);
+            let high1: Vec<f64> = build_synthetic_data(len, 0);
+            let low1: Vec<f64> = build_synthetic_data(len, 0);
+            let close1: Vec<f64> = build_synthetic_data(len, 0);
 
-            let high2: Vec<f64> = build_synthetic_data(len);
-            let low2: Vec<f64> = build_synthetic_data(len);
-            let close2: Vec<f64> = build_synthetic_data(len);
+            let high2: Vec<f64> = build_synthetic_data(len, 0);
+            let low2: Vec<f64> = build_synthetic_data(len, 0);
+            let close2: Vec<f64> = build_synthetic_data(len, 0);
 
             let assets_array: [[*const f64; INPUTS]; NUM_ASSETS] = [
                 [high1.as_ptr(), low1.as_ptr(), close1.as_ptr()],

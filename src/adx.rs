@@ -305,6 +305,7 @@ unsafe fn adx_simd_by_options_n<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test::build_synthetic_data;
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
     };
@@ -345,9 +346,9 @@ mod tests {
         unsafe {
             let data_len = 60;
             let period = 14;
-            let high: Vec<f64> = (0..data_len).map(|i| 100.0 + i as f64 * 0.5).collect();
-            let low: Vec<f64> = (0..data_len).map(|i| 90.0 + i as f64 * 0.5).collect();
-            let close: Vec<f64> = (0..data_len).map(|i| 95.0 + i as f64 * 0.5).collect();
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
             let inputs_ptr: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
             let inputs = inputs_ptr.as_ptr();
@@ -384,9 +385,9 @@ mod tests {
         unsafe {
             let data_len = 60;
             let period = 14;
-            let high: Vec<f64> = (0..data_len).map(|i| 100.0 + i as f64 * 0.5).collect();
-            let low: Vec<f64> = (0..data_len).map(|i| 90.0 + i as f64 * 0.5).collect();
-            let close: Vec<f64> = (0..data_len).map(|i| 95.0 + i as f64 * 0.5).collect();
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
             let inputs_ptr: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
             let inputs = inputs_ptr.as_ptr();
@@ -402,15 +403,9 @@ mod tests {
 
             // Second batch with more data
             let extra_data_len = 10;
-            let high_extra: Vec<f64> = (data_len..data_len + extra_data_len)
-                .map(|i| 100.0 + i as f64 * 0.5)
-                .collect();
-            let low_extra: Vec<f64> = (data_len..data_len + extra_data_len)
-                .map(|i| 90.0 + i as f64 * 0.5)
-                .collect();
-            let close_extra: Vec<f64> = (data_len..data_len + extra_data_len)
-                .map(|i| 95.0 + i as f64 * 0.5)
-                .collect();
+            let high_extra: Vec<f64> = build_synthetic_data(extra_data_len, 2);
+            let low_extra: Vec<f64> = build_synthetic_data(extra_data_len, 0);
+            let close_extra: Vec<f64> = build_synthetic_data(extra_data_len, 1);
 
             let inputs_ptr_extra: [*const f64; INPUTS] = [
                 high_extra.as_ptr(),
@@ -434,9 +429,9 @@ mod tests {
         unsafe {
             let data_len = 60;
             let period = 14;
-            let high: Vec<f64> = (0..data_len).map(|i| 100.0 + i as f64 * 0.5).collect();
-            let low: Vec<f64> = (0..data_len).map(|i| 90.0 + i as f64 * 0.5).collect();
-            let close: Vec<f64> = (0..data_len).map(|i| 95.0 + i as f64 * 0.5).collect();
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
             // Two identical "assets"
             let inputs_ptr_0: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
@@ -465,9 +460,9 @@ mod tests {
     fn test_adx_simd_by_options() {
         unsafe {
             let data_len = 60;
-            let high: Vec<f64> = (0..data_len).map(|i| 100.0 + i as f64 * 0.5).collect();
-            let low: Vec<f64> = (0..data_len).map(|i| 90.0 + i as f64 * 0.5).collect();
-            let close: Vec<f64> = (0..data_len).map(|i| 95.0 + i as f64 * 0.5).collect();
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
             let inputs_ptr: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
             let inputs = inputs_ptr.as_ptr();

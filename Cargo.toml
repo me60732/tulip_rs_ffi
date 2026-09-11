@@ -10,3 +10,11 @@ crate-type = ["cdylib", "staticlib", "lib"]
 
 [dependencies]
 tulip_rs = { path = "../tulip_rs/tulip_rs", default-features = false, features = ["simd_assets", "simd_options"] }
+
+# Used only by build.rs to read the real `tulip_rs::indicators::<name>::{INPUTS,
+# OPTIONS}` constants at build time and emit them as C #defines in
+# include/tulip_rs_ffi_counts.h / examples/tulip_rs_ffi_counts.h -- this is what
+# keeps those C-visible counts from ever drifting out of sync with the core
+# crate (see build.rs for details).
+[build-dependencies]
+tulip_rs = { path = "../tulip_rs/tulip_rs", default-features = false, features = ["simd_assets", "simd_options"] }

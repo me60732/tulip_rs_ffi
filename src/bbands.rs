@@ -314,6 +314,7 @@ unsafe fn bbands_simd_by_options_n<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test::build_synthetic_data;
 
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
@@ -342,7 +343,7 @@ mod tests {
         unsafe {
             // Create test data
             let data_len = 60;
-            let real: Vec<f64> = (0..data_len).map(|i| i as f64 + 100.0).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs = [real.as_ptr()];
             let options: [f64; OPTIONS] = [20.0, 2.0];
 
@@ -372,7 +373,7 @@ mod tests {
     fn test_bbands_batch() {
         unsafe {
             let data_len = 60;
-            let real: Vec<f64> = (0..data_len).map(|i| i as f64 + 100.0).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs = [real.as_ptr()];
             let options: [f64; OPTIONS] = [20.0, 2.0];
 
@@ -387,7 +388,7 @@ mod tests {
             assert_eq!(result.error, CIndicatorError::Ok);
 
             // Second call to batch with new data
-            let more_data: Vec<f64> = (0..10).map(|i| i as f64 + 200.0).collect();
+            let more_data: Vec<f64> = build_synthetic_data(10, 0);
             let new_inputs = [more_data.as_ptr()];
 
             let batch_result =
@@ -407,8 +408,8 @@ mod tests {
             let num_assets = 2;
 
             // Create inputs for 2 assets
-            let real1: Vec<f64> = (0..data_len).map(|i| i as f64 + 100.0).collect();
-            let real2: Vec<f64> = (0..data_len).map(|i| i as f64 + 150.0).collect();
+            let real1: Vec<f64> = build_synthetic_data(data_len, 0);
+            let real2: Vec<f64> = build_synthetic_data(data_len, 2);
 
             let inputs1 = [real1.as_ptr()];
             let inputs2 = [real2.as_ptr()];
@@ -440,7 +441,7 @@ mod tests {
             let data_len = 60;
             let num_option_sets = 2;
 
-            let real: Vec<f64> = (0..data_len).map(|i| i as f64 + 100.0).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs = [real.as_ptr()];
 
             // Two different option sets

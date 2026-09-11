@@ -219,6 +219,7 @@ unsafe fn vwap_simd_by_assets_n<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test::build_synthetic_data;
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
     };
@@ -242,10 +243,10 @@ mod tests {
     fn test_vwap_indicator() {
         unsafe {
             let data_len = 20;
-            let high: Vec<f64> = (1..=data_len).map(|i| i as f64 + 1.0).collect();
-            let low: Vec<f64> = (1..=data_len).map(|i| i as f64 - 1.0).collect();
-            let close: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
-            let volume: Vec<f64> = (1..=data_len).map(|i| i as f64 * 10.0).collect();
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
+            let volume: Vec<f64> = build_synthetic_data(data_len, 3);
 
             // Create a proper array of input pointers
             let inputs_ptr: [*const f64; INPUTS] =
@@ -269,10 +270,10 @@ mod tests {
     fn test_vwap_batch() {
         unsafe {
             let data_len = 20;
-            let high: Vec<f64> = (1..=data_len).map(|i| i as f64 + 1.0).collect();
-            let low: Vec<f64> = (1..=data_len).map(|i| i as f64 - 1.0).collect();
-            let close: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
-            let volume: Vec<f64> = (1..=data_len).map(|i| i as f64 * 10.0).collect();
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
+            let volume: Vec<f64> = build_synthetic_data(data_len, 3);
 
             // Create a proper array of input pointers
             let inputs_ptr: [*const f64; INPUTS] =
@@ -290,12 +291,10 @@ mod tests {
 
             // Second batch with more data
             let extra_data_len = 10;
-            let high_extra: Vec<f64> = (21..=20 + extra_data_len).map(|i| i as f64 + 1.0).collect();
-            let low_extra: Vec<f64> = (21..=20 + extra_data_len).map(|i| i as f64 - 1.0).collect();
-            let close_extra: Vec<f64> = (21..=20 + extra_data_len).map(|i| i as f64).collect();
-            let volume_extra: Vec<f64> = (21..=20 + extra_data_len)
-                .map(|i| i as f64 * 10.0)
-                .collect();
+            let high_extra: Vec<f64> = build_synthetic_data(extra_data_len, 2);
+            let low_extra: Vec<f64> = build_synthetic_data(extra_data_len, 0);
+            let close_extra: Vec<f64> = build_synthetic_data(extra_data_len, 1);
+            let volume_extra: Vec<f64> = build_synthetic_data(extra_data_len, 3);
 
             let inputs_ptr_extra: [*const f64; INPUTS] = [
                 high_extra.as_ptr(),
@@ -325,16 +324,16 @@ mod tests {
     fn test_vwap_simd_by_assets() {
         unsafe {
             let data_len = 20;
-            let high: Vec<f64> = (1..=data_len).map(|i| i as f64 + 1.0).collect();
-            let low: Vec<f64> = (1..=data_len).map(|i| i as f64 - 1.0).collect();
-            let close: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
-            let volume: Vec<f64> = (1..=data_len).map(|i| i as f64 * 10.0).collect();
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
+            let volume: Vec<f64> = build_synthetic_data(data_len, 3);
 
             // Two different "assets"
-            let high2: Vec<f64> = (21..=40).map(|i| i as f64 + 1.0).collect();
-            let low2: Vec<f64> = (21..=40).map(|i| i as f64 - 1.0).collect();
-            let close2: Vec<f64> = (21..=40).map(|i| i as f64).collect();
-            let volume2: Vec<f64> = (21..=40).map(|i| i as f64 * 10.0).collect();
+            let high2: Vec<f64> = build_synthetic_data(20, 3);
+            let low2: Vec<f64> = build_synthetic_data(20, 1);
+            let close2: Vec<f64> = build_synthetic_data(20, 2);
+            let volume2: Vec<f64> = build_synthetic_data(20, 3);
 
             // Create a proper nested array of asset pointers
             // For SIMD by assets with INPUTS=4:

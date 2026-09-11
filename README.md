@@ -71,6 +71,16 @@ Produces `target/release/libtulip_rs_ffi.{so,a}` (crate-type is
 `tulip_rs` crate (see `rust-toolchain.toml`), since `tulip_rs` uses the
 unstable `portable_simd` feature internally.
 
+This also runs `build.rs`, which (re)generates `include/tulip_rs_ffi_counts.h`
+and `examples/tulip_rs_ffi_counts.h` -- one `#define <NAME>_INPUTS N` /
+`#define <NAME>_OPTIONS N` pair per indicator, read directly from the real
+`tulip_rs::indicators::<name>::{INPUTS, OPTIONS}` constants (via a
+`[build-dependencies]` copy of `tulip_rs`), so those counts can never drift
+from the core crate. `include/tulip_rs_ffi.h` pulls the former in automatically
+(`after_includes` in `cbindgen.toml`); the hand-written `examples/tulip_rs_ffi.h`
+includes the latter directly. Always run `cargo build` at least once before
+compiling anything against these headers.
+
 ## Verifying
 
 `verify.c` is a small manual smoke test exercising both indicators,

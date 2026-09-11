@@ -344,15 +344,9 @@ mod tests {
         use crate::common::test::build_synthetic_data;
 
         let data_len = 30;
-        let high: Vec<f64> = build_synthetic_data(data_len)
-            .into_iter()
-            .map(|x| x + 1.0)
-            .collect();
-        let low: Vec<f64> = build_synthetic_data(data_len)
-            .into_iter()
-            .map(|x| x - 1.0)
-            .collect();
-        let close: Vec<f64> = build_synthetic_data(data_len).into_iter().collect();
+        let high: Vec<f64> = build_synthetic_data(data_len, 2);
+        let low: Vec<f64> = build_synthetic_data(data_len, 0);
+        let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
         let inputs = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
         let options = [10.0, 2.0];
@@ -367,7 +361,7 @@ mod tests {
             );
 
             assert_eq!(result.error, CIndicatorError::Ok);
-            assert_eq!(result.num_outputs, 6);
+            assert_eq!(result.num_outputs, 2);
 
             tulip_ffi_result_free(result);
         }
@@ -378,15 +372,9 @@ mod tests {
         use crate::common::test::build_synthetic_data;
 
         let data_len = 30;
-        let high: Vec<f64> = build_synthetic_data(data_len)
-            .into_iter()
-            .map(|x| x + 1.0)
-            .collect();
-        let low: Vec<f64> = build_synthetic_data(data_len)
-            .into_iter()
-            .map(|x| x - 1.0)
-            .collect();
-        let close: Vec<f64> = build_synthetic_data(data_len).into_iter().collect();
+        let high: Vec<f64> = build_synthetic_data(data_len, 2);
+        let low: Vec<f64> = build_synthetic_data(data_len, 0);
+        let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
         let inputs = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
         let options = [10.0, 2.0];
@@ -403,15 +391,9 @@ mod tests {
             assert_eq!(result.error, CIndicatorError::Ok);
 
             // Second batch call with exactly 10 elements (batch length)
-            let high2: Vec<f64> = build_synthetic_data(10)
-                .into_iter()
-                .map(|x| x + 1.0)
-                .collect();
-            let low2: Vec<f64> = build_synthetic_data(10)
-                .into_iter()
-                .map(|x| x - 1.0)
-                .collect();
-            let close2: Vec<f64> = build_synthetic_data(10).into_iter().collect();
+            let high2: Vec<f64> = build_synthetic_data(10, 2);
+            let low2: Vec<f64> = build_synthetic_data(10, 0);
+            let close2: Vec<f64> = build_synthetic_data(10, 1);
 
             let inputs2 = [high2.as_ptr(), low2.as_ptr(), close2.as_ptr()];
 
@@ -419,7 +401,7 @@ mod tests {
                 chandelierexit_batch(result.state, inputs2.as_ptr(), 10, std::ptr::null(), 0);
 
             assert_eq!(batch_result.error, CIndicatorError::Ok);
-            assert_eq!(batch_result.num_outputs, 6);
+            assert_eq!(batch_result.num_outputs, 2);
 
             tulip_ffi_batch_result_free(batch_result);
             chandelierexit_state_free(result.state);
@@ -431,25 +413,13 @@ mod tests {
         use crate::common::test::build_synthetic_data;
 
         let data_len = 30;
-        let high1: Vec<f64> = build_synthetic_data(data_len)
-            .into_iter()
-            .map(|x| x + 1.0)
-            .collect();
-        let low1: Vec<f64> = build_synthetic_data(data_len)
-            .into_iter()
-            .map(|x| x - 1.0)
-            .collect();
-        let close1: Vec<f64> = build_synthetic_data(data_len).into_iter().collect();
+        let high1: Vec<f64> = build_synthetic_data(data_len, 2);
+        let low1: Vec<f64> = build_synthetic_data(data_len, 0);
+        let close1: Vec<f64> = build_synthetic_data(data_len, 1);
 
-        let high2: Vec<f64> = build_synthetic_data(data_len)
-            .into_iter()
-            .map(|x| x + 1.0)
-            .collect();
-        let low2: Vec<f64> = build_synthetic_data(data_len)
-            .into_iter()
-            .map(|x| x - 1.0)
-            .collect();
-        let close2: Vec<f64> = build_synthetic_data(data_len).into_iter().collect();
+        let high2: Vec<f64> = build_synthetic_data(data_len, 2);
+        let low2: Vec<f64> = build_synthetic_data(data_len, 0);
+        let close2: Vec<f64> = build_synthetic_data(data_len, 1);
 
         let inputs_array1 = [high1.as_ptr(), low1.as_ptr(), close1.as_ptr()];
         let inputs_array2 = [high2.as_ptr(), low2.as_ptr(), close2.as_ptr()];
@@ -469,7 +439,7 @@ mod tests {
 
             assert_eq!(result.error, CIndicatorError::Ok);
             assert_eq!(result.num_results, 2);
-            assert_eq!(result.num_outputs, 6);
+            assert_eq!(result.num_outputs, 2);
 
             tulip_ffi_simd_result_free(result);
         }
@@ -480,15 +450,9 @@ mod tests {
         use crate::common::test::build_synthetic_data;
 
         let data_len = 30;
-        let high: Vec<f64> = build_synthetic_data(data_len)
-            .into_iter()
-            .map(|x| x + 1.0)
-            .collect();
-        let low: Vec<f64> = build_synthetic_data(data_len)
-            .into_iter()
-            .map(|x| x - 1.0)
-            .collect();
-        let close: Vec<f64> = build_synthetic_data(data_len).into_iter().collect();
+        let high: Vec<f64> = build_synthetic_data(data_len, 2);
+        let low: Vec<f64> = build_synthetic_data(data_len, 0);
+        let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
         let inputs = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
 
@@ -508,7 +472,7 @@ mod tests {
 
             assert_eq!(result.error, CIndicatorError::Ok);
             assert_eq!(result.num_results, 2);
-            assert_eq!(result.num_outputs, 6);
+            assert_eq!(result.num_outputs, 2);
 
             tulip_ffi_simd_result_free(result);
         }

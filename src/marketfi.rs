@@ -266,9 +266,9 @@ mod tests {
             let data_len = 60;
 
             // marketfi has INPUTS=3: high, low, volume
-            let high_arr = build_synthetic_data(data_len);
-            let low_arr = build_synthetic_data(data_len);
-            let volume_arr = build_synthetic_data(data_len);
+            let high_arr = build_synthetic_data(data_len, 0);
+            let low_arr = build_synthetic_data(data_len, 0);
+            let volume_arr = build_synthetic_data(data_len, 0);
 
             let high_ptr = high_arr.as_ptr();
             let low_ptr = low_arr.as_ptr();
@@ -295,9 +295,9 @@ mod tests {
         unsafe {
             let data_len = 60;
 
-            let high_arr = build_synthetic_data(data_len);
-            let low_arr = build_synthetic_data(data_len);
-            let volume_arr = build_synthetic_data(data_len);
+            let high_arr = build_synthetic_data(data_len, 0);
+            let low_arr = build_synthetic_data(data_len, 0);
+            let volume_arr = build_synthetic_data(data_len, 0);
 
             let high_ptr = high_arr.as_ptr();
             let low_ptr = low_arr.as_ptr();
@@ -314,9 +314,9 @@ mod tests {
             let state = result.state;
 
             // Second call with batch
-            let high_arr2 = build_synthetic_data(data_len);
-            let low_arr2 = build_synthetic_data(data_len);
-            let volume_arr2 = build_synthetic_data(data_len);
+            let high_arr2 = build_synthetic_data(data_len, 0);
+            let low_arr2 = build_synthetic_data(data_len, 0);
+            let volume_arr2 = build_synthetic_data(data_len, 0);
 
             let high_ptr2 = high_arr2.as_ptr();
             let low_ptr2 = low_arr2.as_ptr();
@@ -340,13 +340,13 @@ mod tests {
             let data_len = 60;
 
             // Build inputs for 2 assets
-            let high_arr1 = build_synthetic_data(data_len);
-            let low_arr1 = build_synthetic_data(data_len);
-            let volume_arr1 = build_synthetic_data(data_len);
+            let high_arr1 = build_synthetic_data(data_len, 0);
+            let low_arr1 = build_synthetic_data(data_len, 0);
+            let volume_arr1 = build_synthetic_data(data_len, 0);
 
-            let high_arr2 = build_synthetic_data(data_len);
-            let low_arr2 = build_synthetic_data(data_len);
-            let volume_arr2 = build_synthetic_data(data_len);
+            let high_arr2 = build_synthetic_data(data_len, 0);
+            let low_arr2 = build_synthetic_data(data_len, 0);
+            let volume_arr2 = build_synthetic_data(data_len, 0);
 
             // Asset 1 inputs
             let high_ptr1 = high_arr1.as_ptr();

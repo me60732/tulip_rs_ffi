@@ -330,7 +330,7 @@ mod tests {
         use crate::common::test::build_synthetic_data;
 
         let data_len = 20;
-        let real: Vec<f64> = build_synthetic_data(data_len);
+        let real: Vec<f64> = build_synthetic_data(data_len, 0);
         let inputs = [real.as_ptr()];
         let options = [10.0];
 
@@ -355,7 +355,7 @@ mod tests {
         use crate::common::test::build_synthetic_data;
 
         let data_len = 20;
-        let real: Vec<f64> = build_synthetic_data(data_len);
+        let real: Vec<f64> = build_synthetic_data(data_len, 0);
         let inputs = [real.as_ptr()];
         let options = [10.0];
 
@@ -371,7 +371,7 @@ mod tests {
             assert_eq!(result.error, CIndicatorError::Ok);
 
             // Second batch call with exactly 10 elements (batch length)
-            let real2: Vec<f64> = build_synthetic_data(10);
+            let real2: Vec<f64> = build_synthetic_data(10, 0);
             let inputs2 = [real2.as_ptr()];
 
             let batch_result = cmo_batch(result.state, inputs2.as_ptr(), 10, std::ptr::null(), 0);
@@ -389,8 +389,8 @@ mod tests {
         use crate::common::test::build_synthetic_data;
 
         let data_len = 20;
-        let real1: Vec<f64> = build_synthetic_data(data_len);
-        let real2: Vec<f64> = build_synthetic_data(data_len);
+        let real1: Vec<f64> = build_synthetic_data(data_len, 0);
+        let real2: Vec<f64> = build_synthetic_data(data_len, 0);
 
         // For SIMD by assets with INPUTS=1:
         let inputs_array1 = [real1.as_ptr()];
@@ -422,7 +422,7 @@ mod tests {
         use crate::common::test::build_synthetic_data;
 
         let data_len = 30;
-        let real: Vec<f64> = build_synthetic_data(data_len);
+        let real: Vec<f64> = build_synthetic_data(data_len, 0);
         // inputs is a single array of INPUTS pointers
         let inputs = [real.as_ptr()];
 

@@ -351,7 +351,7 @@ mod tests {
     fn test_roofingfilter_indicator() {
         unsafe {
             let data_len = 60;
-            let real_arr: Vec<f64> = build_synthetic_data(data_len);
+            let real_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] = [real_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();
@@ -378,7 +378,7 @@ mod tests {
     fn test_roofingfilter_indicator_nooptional() {
         unsafe {
             let data_len = 60;
-            let real_arr: Vec<f64> = build_synthetic_data(data_len);
+            let real_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] = [real_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();
@@ -401,7 +401,7 @@ mod tests {
     fn test_roofingfilter_batch() {
         unsafe {
             let data_len = 60;
-            let real_arr: Vec<f64> = build_synthetic_data(data_len);
+            let real_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] = [real_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();
@@ -413,7 +413,7 @@ mod tests {
             let result = roofingfilter_indicator(inputs, data_len, options, ptr::null(), 0);
             assert_eq!(result.error, CIndicatorError::Ok);
 
-            let new_inputs_arr: Vec<f64> = build_synthetic_data(10);
+            let new_inputs_arr: Vec<f64> = build_synthetic_data(10, 0);
 
             let new_inputs_arr_ptr: [*const f64; INPUTS] = [new_inputs_arr.as_ptr()];
             let new_inputs: *const *const f64 = new_inputs_arr_ptr.as_ptr();
@@ -433,10 +433,10 @@ mod tests {
             let num_assets = 4;
 
             // Create inputs for 4 assets
-            let asset0_real: Vec<f64> = build_synthetic_data(data_len);
-            let asset1_real: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1.5).collect();
-            let asset2_real: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 2.0).collect();
-            let asset3_real: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 2.5).collect();
+            let asset0_real: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset1_real: Vec<f64> = build_synthetic_data(data_len, 1);
+            let asset2_real: Vec<f64> = build_synthetic_data(data_len, 2);
+            let asset3_real: Vec<f64> = build_synthetic_data(data_len, 3);
 
             let inputs_arr0: [*const f64; INPUTS] = [asset0_real.as_ptr()];
             let inputs_arr1: [*const f64; INPUTS] = [asset1_real.as_ptr()];
@@ -473,7 +473,7 @@ mod tests {
             let data_len = 60;
             let num_option_sets = 2;
 
-            let real_arr: Vec<f64> = build_synthetic_data(data_len);
+            let real_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] = [real_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();

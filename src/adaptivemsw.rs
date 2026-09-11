@@ -268,6 +268,7 @@ unsafe fn adaptivemsw_simd_by_assets_n<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test::build_synthetic_data;
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
     };
@@ -304,11 +305,8 @@ mod tests {
     fn test_adaptivemsw_indicator() {
         unsafe {
             let data_len = 60;
-            let real: Vec<f64> = (0..data_len)
-                .map(|i| 100.0 + (i as f64 * 0.5).sin())
-                .collect();
-
-            let inputs_ptr: [*const f64; INPUTS] = [real.as_ptr()];
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
+let inputs_ptr: [*const f64; INPUTS] = [real.as_ptr()];
             let inputs = inputs_ptr.as_ptr();
             let options = [0f64; OPTIONS].as_ptr();
 
@@ -336,11 +334,8 @@ mod tests {
     fn test_adaptivemsw_batch() {
         unsafe {
             let data_len = 60;
-            let real: Vec<f64> = (0..data_len)
-                .map(|i| 100.0 + (i as f64 * 0.5).sin())
-                .collect();
-
-            let inputs_ptr: [*const f64; INPUTS] = [real.as_ptr()];
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
+let inputs_ptr: [*const f64; INPUTS] = [real.as_ptr()];
             let inputs = inputs_ptr.as_ptr();
             let options = [0f64; OPTIONS].as_ptr();
 
@@ -354,11 +349,8 @@ mod tests {
 
             // Second batch with more data
             let extra_data_len = 10;
-            let real_extra: Vec<f64> = (data_len..data_len + extra_data_len)
-                .map(|i| 100.0 + (i as f64 * 0.5).sin())
-                .collect();
-
-            let inputs_ptr_extra: [*const f64; INPUTS] = [real_extra.as_ptr()];
+            let real_extra: Vec<f64> = build_synthetic_data(extra_data_len, 0);
+let inputs_ptr_extra: [*const f64; INPUTS] = [real_extra.as_ptr()];
             let inputs_extra = inputs_ptr_extra.as_ptr();
             let batch_result =
                 adaptivemsw_batch(state, inputs_extra, extra_data_len, std::ptr::null(), 0);
@@ -376,11 +368,8 @@ mod tests {
     fn test_adaptivemsw_simd_by_assets() {
         unsafe {
             let data_len = 60;
-            let real: Vec<f64> = (0..data_len)
-                .map(|i| 100.0 + (i as f64 * 0.5).sin())
-                .collect();
-
-            // Two identical "assets"
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
+// Two identical "assets"
             let inputs_ptr_0: [*const f64; INPUTS] = [real.as_ptr()];
             let inputs_ptr_1: [*const f64; INPUTS] = [real.as_ptr()];
             let assets_arr: [*const *const f64; 2] = [inputs_ptr_0.as_ptr(), inputs_ptr_1.as_ptr()];

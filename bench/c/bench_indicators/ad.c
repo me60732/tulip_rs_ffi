@@ -11,7 +11,7 @@ typedef struct {
 
 static void bench_ad(void *ctx_) {
     AdCtx *ctx = ctx_;
-    const double *inputs[4] = {ctx->stock->high, ctx->stock->low, ctx->stock->close, ctx->stock->volume};
+    const double *inputs[AD_INPUTS] = {ctx->stock->high, ctx->stock->low, ctx->stock->close, ctx->stock->volume};
     struct CIndicatorResult r = ad_indicator(inputs, ctx->stock->len, NULL, NULL, 0);
     if (r.error != C_INDICATOR_ERROR_OK) {
         fprintf(stderr, "[error] ad_indicator failed: %d\n", (int) r.error);
@@ -29,12 +29,11 @@ static void bench_ad(void *ctx_) {
 static void bench_tulipc_ad(void *ctx_) {
     AdCtx *ctx = ctx_;
     size_t len = ctx->stock->len;
-    double options[0] = {};
-    int start_index = ti_ad_start(options);
+    int start_index = ti_ad_start(NULL);
     if (start_index < 0) { fprintf(stderr, "[error] ti_ad_start returned negative index\n"); exit(1); }
     int output_len = (int) len - start_index;
     double *output = malloc(sizeof(double) * (size_t) output_len);
-    const double *inputs[4] = {ctx->stock->high, ctx->stock->low, ctx->stock->close, ctx->stock->volume};
+    const double *inputs[AD_INPUTS] = {ctx->stock->high, ctx->stock->low, ctx->stock->close, ctx->stock->volume};
     double *outputs[1] = {output};
     int ret = ti_ad((int) len, inputs, options, outputs);
     if (ret != 0) { fprintf(stderr, "[error] ti_ad returned %d\n", ret); exit(1); }

@@ -262,9 +262,9 @@ mod tests {
         unsafe {
             let data_len = 20;
             // Create high, low, close prices
-            let high_arr: Vec<f64> = build_synthetic_data(data_len);
-            let low_arr: Vec<f64> = build_synthetic_data(data_len);
-            let close_arr: Vec<f64> = build_synthetic_data(data_len);
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] =
                 [high_arr.as_ptr(), low_arr.as_ptr(), close_arr.as_ptr()];
@@ -288,9 +288,9 @@ mod tests {
         unsafe {
             let data_len = 20;
             // Create high, low, close prices
-            let high_arr: Vec<f64> = build_synthetic_data(data_len);
-            let low_arr: Vec<f64> = build_synthetic_data(data_len);
-            let close_arr: Vec<f64> = build_synthetic_data(data_len);
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] =
                 [high_arr.as_ptr(), low_arr.as_ptr(), close_arr.as_ptr()];
@@ -301,9 +301,9 @@ mod tests {
             let result = tr_indicator(inputs, data_len, options, ptr::null(), 0);
             assert_eq!(result.error, CIndicatorError::Ok);
 
-            let new_high_arr: Vec<f64> = build_synthetic_data(data_len);
-            let new_low_arr: Vec<f64> = build_synthetic_data(data_len);
-            let new_close_arr: Vec<f64> = build_synthetic_data(data_len);
+            let new_high_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let new_low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let new_close_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let new_inputs_arr: [*const f64; INPUTS] = [
                 new_high_arr.as_ptr(),
@@ -328,13 +328,13 @@ mod tests {
             let num_assets = 2;
 
             // Create inputs for 2 assets
-            let asset0_high: Vec<f64> = build_synthetic_data(data_len);
-            let asset0_low: Vec<f64> = build_synthetic_data(data_len);
-            let asset0_close: Vec<f64> = build_synthetic_data(data_len);
+            let asset0_high: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset0_low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset0_close: Vec<f64> = build_synthetic_data(data_len, 0);
 
-            let asset1_high: Vec<f64> = build_synthetic_data(data_len);
-            let asset1_low: Vec<f64> = build_synthetic_data(data_len);
-            let asset1_close: Vec<f64> = build_synthetic_data(data_len);
+            let asset1_high: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset1_low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset1_close: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr0: [*const f64; INPUTS] = [
                 asset0_high.as_ptr(),

@@ -308,7 +308,7 @@ mod tests {
     fn test_tema_indicator() {
         unsafe {
             let data_len = 20;
-            let inputs_arr: Vec<f64> = build_synthetic_data(data_len);
+            let inputs_arr: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs: *const *const f64 = &inputs_arr.as_ptr();
             let options_arr: [f64; OPTIONS] = [5.0];
             let options: *const f64 = options_arr.as_ptr();
@@ -328,7 +328,7 @@ mod tests {
     fn test_tema_batch() {
         unsafe {
             let data_len = 20;
-            let inputs_arr: Vec<f64> = build_synthetic_data(data_len);
+            let inputs_arr: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs: *const *const f64 = &inputs_arr.as_ptr();
             let options_arr: [f64; OPTIONS] = [5.0];
             let options: *const f64 = options_arr.as_ptr();
@@ -336,7 +336,7 @@ mod tests {
             let result = tema_indicator(inputs, data_len, options, ptr::null(), 0);
             assert_eq!(result.error, CIndicatorError::Ok);
 
-            let new_inputs_arr: Vec<f64> = build_synthetic_data(data_len);
+            let new_inputs_arr: Vec<f64> = build_synthetic_data(data_len, 0);
             let new_inputs: *const *const f64 = &new_inputs_arr.as_ptr();
 
             let batch_result = tema_batch(result.state, new_inputs, 10, ptr::null(), 0);
@@ -354,8 +354,8 @@ mod tests {
             let num_assets = 2;
 
             // Create inputs for 2 assets
-            let asset0_inputs: Vec<f64> = build_synthetic_data(data_len);
-            let asset1_inputs: Vec<f64> = build_synthetic_data(data_len);
+            let asset0_inputs: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset1_inputs: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr0: [*const f64; INPUTS] = [asset0_inputs.as_ptr()];
             let inputs_arr1: [*const f64; INPUTS] = [asset1_inputs.as_ptr()];
@@ -405,7 +405,7 @@ mod tests {
             // period=5 -> min_data=13, period=10 -> min_data=28
             let data_len = 30;
 
-            let inputs_arr: Vec<f64> = build_synthetic_data(data_len);
+            let inputs_arr: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs: *const *const f64 = &inputs_arr.as_ptr();
 
             // Create 2 different option sets

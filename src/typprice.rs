@@ -247,6 +247,7 @@ unsafe fn typprice_simd_by_assets_n<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test::build_synthetic_data;
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
     };
@@ -286,9 +287,9 @@ mod tests {
         unsafe {
             let data_len = 20;
             // Create test data: high, low, close prices
-            let high: Vec<f64> = (1..=data_len).map(|i| i as f64 + 5.0).collect();
-            let low: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
-            let close: Vec<f64> = (1..=data_len).map(|i| i as f64 + 2.5).collect();
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
             let inputs_array: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
             let options: [f64; OPTIONS] = [];
@@ -313,9 +314,9 @@ mod tests {
         unsafe {
             let data_len = 20;
             // Create test data: high, low, close prices
-            let high: Vec<f64> = (1..=data_len).map(|i| i as f64 + 5.0).collect();
-            let low: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
-            let close: Vec<f64> = (1..=data_len).map(|i| i as f64 + 2.5).collect();
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
             let inputs_array: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
             let options: [f64; OPTIONS] = [];
@@ -335,9 +336,9 @@ mod tests {
 
             // Second batch with more data
             let new_data_len = 10;
-            let high2: Vec<f64> = (21..=30).map(|i| i as f64 + 5.0).collect();
-            let low2: Vec<f64> = (21..=30).map(|i| i as f64).collect();
-            let close2: Vec<f64> = (21..=30).map(|i| i as f64 + 2.5).collect();
+            let high2: Vec<f64> = build_synthetic_data(10, 3);
+            let low2: Vec<f64> = build_synthetic_data(10, 1);
+            let close2: Vec<f64> = build_synthetic_data(10, 2);
 
             let inputs_array2: [*const f64; INPUTS] =
                 [high2.as_ptr(), low2.as_ptr(), close2.as_ptr()];
@@ -365,14 +366,14 @@ mod tests {
             let data_len = 20;
 
             // Create test data for asset 1
-            let high1: Vec<f64> = (1..=data_len).map(|i| i as f64 + 5.0).collect();
-            let low1: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
-            let close1: Vec<f64> = (1..=data_len).map(|i| i as f64 + 2.5).collect();
+            let high1: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low1: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close1: Vec<f64> = build_synthetic_data(data_len, 1);
 
             // Create test data for asset 2
-            let high2: Vec<f64> = (21..=40).map(|i| i as f64 + 5.0).collect();
-            let low2: Vec<f64> = (21..=40).map(|i| i as f64).collect();
-            let close2: Vec<f64> = (21..=40).map(|i| i as f64 + 2.5).collect();
+            let high2: Vec<f64> = build_synthetic_data(20, 3);
+            let low2: Vec<f64> = build_synthetic_data(20, 1);
+            let close2: Vec<f64> = build_synthetic_data(20, 2);
 
             let asset1_inputs: [*const f64; INPUTS] =
                 [high1.as_ptr(), low1.as_ptr(), close1.as_ptr()];

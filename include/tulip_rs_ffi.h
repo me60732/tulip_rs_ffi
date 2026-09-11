@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "tulip_rs_ffi_counts.h"
 
 /**
  * C-ABI mirror of `tulip_rs::types::IndicatorType`.
@@ -2322,25 +2323,6 @@ struct CSimdResult chaikinmf_simd_by_options(const double *const *inputs,
                                              uintptr_t numoptional);
 
 /**
- * Returns static metadata about the `chandelierexit` indicator: its name, input
- * names, option names, and (mandatory/optional) output names, mirroring
- * `ChandelierExit::INFO`.
- *
- * The returned strings are leaked, process-lifetime C strings -- read them,
- * don't free them.
- */
-struct CIndicatorInfo chandelierexit_info(void);
-
-/**
- * Returns the minimum number of bars `chandelierexit` needs to produce any output at
- * all, given `options`.
- *
- * # Safety
- * `options` must point to `OPTIONS` (2) valid `f64`s.
- */
-uintptr_t chandelierexit_min_data(const double *options);
-
-/**
  * Runs `chandelierexit` over `data_len` bars.
  *
  * `inputs` must point to `INPUTS` (3) pointers, in order:
@@ -2355,14 +2337,14 @@ uintptr_t chandelierexit_min_data(const double *options);
  * - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
  *   `data_len` valid `f64`s.
  * - `options` must point to `OPTIONS` valid `f64`s.
- * - `optional_outputs`, if non-null, must point to `numoptional` valid
+ * - `optional_outputs`, if non-null, must point to `num_optional` valid
  *   `bool`s (pass null + 0 to request no optional outputs).
  */
 struct CIndicatorResult chandelierexit_indicator(const double *const *inputs,
                                                  uintptr_t data_len,
                                                  const double *options,
                                                  const bool *optional_outputs,
-                                                 uintptr_t numoptional);
+                                                 uintptr_t num_optional);
 
 /**
  * Continues a `chandelierexit` calculation from `state`, mutating it in place so
@@ -2378,14 +2360,14 @@ struct CIndicatorResult chandelierexit_indicator(const double *const *inputs,
  *   `chandelierexit_indicator()`.
  * - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
  *   `data_len` valid `f64`s.
- * - `optional_outputs`, if non-null, must point to `numoptional` valid
+ * - `optional_outputs`, if non-null, must point to `num_optional` valid
  *   `bool`s.
  */
 struct CBatchResult chandelierexit_batch(void *state,
                                          const double *const *inputs,
                                          uintptr_t data_len,
                                          const bool *optional_outputs,
-                                         uintptr_t numoptional);
+                                         uintptr_t num_optional);
 
 /**
  * Frees a state handle returned by `chandelierexit_indicator()` (or one of the
@@ -2418,7 +2400,7 @@ void chandelierexit_state_free(void *state);
  *   `INPUTS` valid non-null `*const f64`s, each pointing to `data_len` valid
  *   `f64`s.
  * - `options` must point to `OPTIONS` valid `f64`s.
- * - `optional_outputs`, if non-null, must point to `numoptional` valid
+ * - `optional_outputs`, if non-null, must point to `num_optional` valid
  *   `bool`s.
  */
 struct CSimdResult chandelierexit_simd_by_assets(const double *const *const *inputs,
@@ -2426,7 +2408,7 @@ struct CSimdResult chandelierexit_simd_by_assets(const double *const *const *inp
                                                  uintptr_t data_len,
                                                  const double *options,
                                                  const bool *optional_outputs,
-                                                 uintptr_t numoptional);
+                                                 uintptr_t num_optional);
 
 /**
  * Computes Chandelier Exit for one asset with `N` different option sets
@@ -2449,7 +2431,7 @@ struct CSimdResult chandelierexit_simd_by_assets(const double *const *const *inp
  *   pointing to `data_len` valid `f64`s.
  * - `options` must point to `num_option_sets` valid pointers, each
  *   pointing to `OPTIONS` valid `f64`s.
- * - `optional_outputs`, if non-null, must point to `numoptional` valid
+ * - `optional_outputs`, if non-null, must point to `num_optional` valid
  *   `bool`s.
  */
 struct CSimdResult chandelierexit_simd_by_options(const double *const *inputs,
@@ -2457,7 +2439,7 @@ struct CSimdResult chandelierexit_simd_by_options(const double *const *inputs,
                                                   const double *const *options,
                                                   uintptr_t num_option_sets,
                                                   const bool *optional_outputs,
-                                                  uintptr_t numoptional);
+                                                  uintptr_t num_optional);
 
 /**
  * Returns static metadata about the `cmo` indicator: its name, input
@@ -2626,25 +2608,6 @@ void tulip_ffi_batch_result_free(struct CBatchResult result);
 void tulip_ffi_simd_result_free(struct CSimdResult result);
 
 /**
- * Returns static metadata about the `cvi` indicator: its name, input
- * names, option names, and (mandatory/optional) output names, mirroring
- * `Cvi::INFO`.
- *
- * The returned strings are leaked, process-lifetime C strings -- read them,
- * don't free them.
- */
-struct CIndicatorInfo cvi_info(void);
-
-/**
- * Returns the minimum number of bars `cvi` needs to produce any output at
- * all, given `options`.
- *
- * # Safety
- * `options` must point to `OPTIONS` (1) valid `f64`s.
- */
-uintptr_t cvi_min_data(const double *options);
-
-/**
  * Runs `cvi` over `data_len` bars.
  *
  * `inputs` must point to `INPUTS` (2) pointers, in order:
@@ -2658,14 +2621,14 @@ uintptr_t cvi_min_data(const double *options);
  * - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
  *   `data_len` valid `f64`s.
  * - `options` must point to `OPTIONS` valid `f64`s.
- * - `optional_outputs`, if non-null, must point to `numoptional` valid
+ * - `optional_outputs`, if non-null, must point to `num_optional` valid
  *   `bool`s (pass null + 0 to request no optional outputs).
  */
 struct CIndicatorResult cvi_indicator(const double *const *inputs,
                                       uintptr_t data_len,
                                       const double *options,
                                       const bool *optional_outputs,
-                                      uintptr_t numoptional);
+                                      uintptr_t num_optional);
 
 /**
  * Continues a `cvi` calculation from `state`, mutating it in place so
@@ -2680,14 +2643,14 @@ struct CIndicatorResult cvi_indicator(const double *const *inputs,
  *   `cvi_indicator()`.
  * - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
  *   `data_len` valid `f64`s.
- * - `optional_outputs`, if non-null, must point to `numoptional` valid
+ * - `optional_outputs`, if non-null, must point to `num_optional` valid
  *   `bool`s.
  */
 struct CBatchResult cvi_batch(void *state,
                               const double *const *inputs,
                               uintptr_t data_len,
                               const bool *optional_outputs,
-                              uintptr_t numoptional);
+                              uintptr_t num_optional);
 
 /**
  * Frees a state handle returned by `cvi_indicator()` (or one of the
@@ -2720,7 +2683,7 @@ void cvi_state_free(void *state);
  *   `INPUTS` valid non-null `*const f64`s, each pointing to `data_len` valid
  *   `f64`s.
  * - `options` must point to `OPTIONS` valid `f64`s.
- * - `optional_outputs`, if non-null, must point to `numoptional` valid
+ * - `optional_outputs`, if non-null, must point to `num_optional` valid
  *   `bool`s.
  */
 struct CSimdResult cvi_simd_by_assets(const double *const *const *inputs,
@@ -2728,7 +2691,7 @@ struct CSimdResult cvi_simd_by_assets(const double *const *const *inputs,
                                       uintptr_t data_len,
                                       const double *options,
                                       const bool *optional_outputs,
-                                      uintptr_t numoptional);
+                                      uintptr_t num_optional);
 
 /**
  * Computes CVI for one asset with `N` different option sets
@@ -2751,7 +2714,7 @@ struct CSimdResult cvi_simd_by_assets(const double *const *const *inputs,
  *   pointing to `data_len` valid `f64`s.
  * - `options` must point to `num_option_sets` valid pointers, each
  *   pointing to `OPTIONS` valid `f64`s.
- * - `optional_outputs`, if non-null, must point to `numoptional` valid
+ * - `optional_outputs`, if non-null, must point to `num_optional` valid
  *   `bool`s.
  */
 struct CSimdResult cvi_simd_by_options(const double *const *inputs,
@@ -2759,7 +2722,7 @@ struct CSimdResult cvi_simd_by_options(const double *const *inputs,
                                        const double *const *options,
                                        uintptr_t num_option_sets,
                                        const bool *optional_outputs,
-                                       uintptr_t numoptional);
+                                       uintptr_t num_optional);
 
 /**
  * Returns static metadata about the `cybercycle` indicator: its name, input

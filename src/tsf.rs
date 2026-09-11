@@ -290,6 +290,7 @@ unsafe fn tsf_simd_by_options_n<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test::build_synthetic_data;
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
     };
@@ -316,7 +317,7 @@ mod tests {
     fn test_tsf_indicator() {
         unsafe {
             let data_len = 20;
-            let real: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
 
             // Create a proper array of input pointers
             let inputs_ptr: [*const f64; INPUTS] = [real.as_ptr()];
@@ -335,7 +336,7 @@ mod tests {
     fn test_tsf_batch() {
         unsafe {
             let data_len = 20;
-            let real: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
 
             // Create a proper array of input pointers
             let inputs_ptr: [*const f64; INPUTS] = [real.as_ptr()];
@@ -349,7 +350,7 @@ mod tests {
 
             // Second batch with more data
             let extra_data_len = 10;
-            let real_extra: Vec<f64> = (21..=30).map(|i| i as f64).collect();
+            let real_extra: Vec<f64> = build_synthetic_data(extra_data_len, 0);
 
             let inputs_ptr_extra: [*const f64; INPUTS] = [real_extra.as_ptr()];
             let inputs_extra = inputs_ptr_extra.as_ptr();
@@ -367,8 +368,8 @@ mod tests {
     fn test_tsf_simd_by_assets() {
         unsafe {
             let data_len = 20;
-            let real: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
-            let real2: Vec<f64> = (21..=40).map(|i| i as f64).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
+            let real2: Vec<f64> = build_synthetic_data(data_len, 1);
 
             // Two different "assets"
             let assets_array: [*const f64; INPUTS] = [real.as_ptr()];
@@ -397,7 +398,7 @@ mod tests {
         unsafe {
             // Must satisfy min_data for *all* option sets used below.
             let data_len = 40;
-            let real: Vec<f64> = (1..=data_len).map(|i| i as f64).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
 
             // Create a proper array of input pointers
             let inputs_ptr: [*const f64; INPUTS] = [real.as_ptr()];
@@ -407,9 +408,9 @@ mod tests {
             let options1: [f64; OPTIONS] = [10.0];
             let options2: [f64; OPTIONS] = [20.0];
             let options_arr: [*const f64; 2] = [options1.as_ptr(), options2.as_ptr()];
-            let options_ptr = options_arr.as_ptr();
+            let options = options_arr.as_ptr();
 
-            let result = tsf_simd_by_options(inputs, data_len, options_ptr, 2, std::ptr::null(), 0);
+            let result = tsf_simd_by_options(inputs, data_len, options, 2, std::ptr::null(), 0);
 
             assert_eq!(result.error, CIndicatorError::Ok);
             assert_eq!(result.num_results, 2);

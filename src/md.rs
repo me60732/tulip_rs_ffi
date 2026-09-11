@@ -328,7 +328,7 @@ mod tests {
     fn test_md_indicator() {
         unsafe {
             let data_len = 20;
-            let real = build_synthetic_data(data_len);
+            let real = build_synthetic_data(data_len, 0);
 
             let inputs: [*const f64; INPUTS] = [real.as_ptr()];
             let options = [5.0];
@@ -352,7 +352,7 @@ mod tests {
     fn test_md_batch() {
         unsafe {
             let data_len = 20;
-            let real1 = build_synthetic_data(data_len);
+            let real1 = build_synthetic_data(data_len, 0);
 
             let inputs1: [*const f64; INPUTS] = [real1.as_ptr()];
             let options = [5.0];
@@ -369,7 +369,7 @@ mod tests {
             let state = result.state;
 
             let data_len2 = 10;
-            let real2 = build_synthetic_data(data_len2);
+            let real2 = build_synthetic_data(data_len2, 0);
 
             let inputs2: [*const f64; INPUTS] = [real2.as_ptr()];
 
@@ -386,8 +386,8 @@ mod tests {
         const NUM_ASSETS: usize = 2;
         unsafe {
             let data_len = 20;
-            let real1 = build_synthetic_data(data_len);
-            let real2 = build_synthetic_data(data_len);
+            let real1 = build_synthetic_data(data_len, 0);
+            let real2 = build_synthetic_data(data_len, 0);
 
             let inputs_array1: [*const f64; INPUTS] = [real1.as_ptr()];
             let inputs_array2: [*const f64; INPUTS] = [real2.as_ptr()];
@@ -422,7 +422,7 @@ mod tests {
         const NUM_OPTION_SETS: usize = 2;
         unsafe {
             let data_len = 20;
-            let real = build_synthetic_data(data_len);
+            let real = build_synthetic_data(data_len, 0);
 
             let inputs: [*const f64; INPUTS] = [real.as_ptr()];
 

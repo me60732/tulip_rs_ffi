@@ -269,7 +269,7 @@ mod tests {
     fn test_homodynediscriminator_indicator() {
         unsafe {
             let data_len = 60; // Need at least 23 bars for min_data
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
 
             let inputs_ptr = &inputs_arr as *const _ as *const f64;
             let inputs = [inputs_ptr];
@@ -294,7 +294,7 @@ mod tests {
     fn test_homodynediscriminator_batch() {
         unsafe {
             let data_len = 60;
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
 
             let inputs_ptr = &inputs_arr as *const _ as *const f64;
             let inputs = [inputs_ptr];
@@ -313,7 +313,7 @@ mod tests {
             let state = result.state;
 
             // Second batch call with additional data
-            let additional_data = build_synthetic_data(30);
+            let additional_data = build_synthetic_data(30, 0);
             let inputs_ptr2 = &additional_data as *const _ as *const f64;
             let inputs2 = [inputs_ptr2];
 
@@ -333,8 +333,8 @@ mod tests {
             let data_len = 60;
             let num_assets = 2;
 
-            let inputs_arr1 = build_synthetic_data(data_len);
-            let inputs_arr2 = build_synthetic_data(data_len);
+            let inputs_arr1 = build_synthetic_data(data_len, 0);
+            let inputs_arr2 = build_synthetic_data(data_len, 0);
 
             let inputs_ptr1 = &inputs_arr1 as *const _ as *const f64;
             let inputs_ptr2 = &inputs_arr2 as *const _ as *const f64;

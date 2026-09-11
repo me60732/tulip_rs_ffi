@@ -245,8 +245,8 @@ mod tests {
         let data_len = 60;
 
         unsafe {
-            let close = build_synthetic_data(data_len);
-            let volume = build_synthetic_data(data_len);
+            let close = build_synthetic_data(data_len, 0);
+            let volume = build_synthetic_data(data_len, 0);
             let inputs: [*const f64; INPUTS] = [close.as_ptr(), volume.as_ptr()];
             let result = obv_indicator(
                 inputs.as_ptr(),
@@ -272,8 +272,8 @@ mod tests {
         let data_len = 60;
 
         unsafe {
-            let close = build_synthetic_data(data_len);
-            let volume = build_synthetic_data(data_len);
+            let close = build_synthetic_data(data_len, 0);
+            let volume = build_synthetic_data(data_len, 0);
             let inputs: [*const f64; INPUTS] = [close.as_ptr(), volume.as_ptr()];
             let result = obv_indicator(
                 inputs.as_ptr(),
@@ -287,8 +287,8 @@ mod tests {
             let state = result.state;
             tulip_ffi_result_free(result);
 
-            let more_close = build_synthetic_data(data_len);
-            let more_volume = build_synthetic_data(data_len);
+            let more_close = build_synthetic_data(data_len, 0);
+            let more_volume = build_synthetic_data(data_len, 0);
             let more_inputs: [*const f64; INPUTS] = [more_close.as_ptr(), more_volume.as_ptr()];
 
             let batch_result =
@@ -308,14 +308,14 @@ mod tests {
         let data_len = 60;
 
         unsafe {
-            let c0 = build_synthetic_data(data_len);
-            let v0 = build_synthetic_data(data_len);
-            let c1 = build_synthetic_data(data_len);
-            let v1 = build_synthetic_data(data_len);
-            let c2 = build_synthetic_data(data_len);
-            let v2 = build_synthetic_data(data_len);
-            let c3 = build_synthetic_data(data_len);
-            let v3 = build_synthetic_data(data_len);
+            let c0 = build_synthetic_data(data_len, 0);
+            let v0 = build_synthetic_data(data_len, 0);
+            let c1 = build_synthetic_data(data_len, 0);
+            let v1 = build_synthetic_data(data_len, 0);
+            let c2 = build_synthetic_data(data_len, 0);
+            let v2 = build_synthetic_data(data_len, 0);
+            let c3 = build_synthetic_data(data_len, 0);
+            let v3 = build_synthetic_data(data_len, 0);
             let asset_inputs: [[*const f64; INPUTS]; NUM_ASSETS] = [
                 [c0.as_ptr(), v0.as_ptr()],
                 [c1.as_ptr(), v1.as_ptr()],

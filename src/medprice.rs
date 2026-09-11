@@ -273,7 +273,7 @@ mod tests {
     fn test_medprice_indicator() {
         unsafe {
             let data_len = 60;
-            let inputs: Vec<f64> = build_synthetic_data(data_len);
+            let inputs: Vec<f64> = build_synthetic_data(data_len, 0);
             let high_ptr = inputs.as_ptr();
             let low_ptr = inputs.as_ptr();
 
@@ -299,7 +299,7 @@ mod tests {
     fn test_medprice_batch() {
         unsafe {
             let data_len = 60;
-            let inputs: Vec<f64> = build_synthetic_data(data_len);
+            let inputs: Vec<f64> = build_synthetic_data(data_len, 0);
             let high_ptr = inputs.as_ptr();
             let low_ptr = inputs.as_ptr();
 
@@ -320,7 +320,7 @@ mod tests {
             tulip_ffi_result_free(result);
 
             let new_data_len = 30;
-            let new_inputs: Vec<f64> = build_synthetic_data(new_data_len);
+            let new_inputs: Vec<f64> = build_synthetic_data(new_data_len, 0);
             let high_ptr2 = new_inputs.as_ptr();
             let low_ptr2 = new_inputs.as_ptr();
 
@@ -347,8 +347,8 @@ mod tests {
             const NUM_ASSETS: usize = 2;
             let data_len = 60;
 
-            let inputs1: Vec<f64> = build_synthetic_data(data_len);
-            let inputs2: Vec<f64> = build_synthetic_data(data_len);
+            let inputs1: Vec<f64> = build_synthetic_data(data_len, 0);
+            let inputs2: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let high1_ptr = inputs1.as_ptr();
             let low1_ptr = inputs1.as_ptr();

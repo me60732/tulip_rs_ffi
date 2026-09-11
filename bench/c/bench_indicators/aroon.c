@@ -10,8 +10,8 @@ typedef struct {
 
 static void bench_aroon(void *ctx_) {
     AroonCtx *ctx = ctx_;
-    const double *inputs[2] = {ctx->stock->high, ctx->stock->low};
-    double opts[1] = {ctx->period};
+    const double *inputs[AROON_INPUTS] = {ctx->stock->high, ctx->stock->low};
+    double opts[AROON_OPTIONS] = {ctx->period};
     struct CIndicatorResult r = aroon_indicator(inputs, ctx->stock->len, opts, NULL, 0);
     if (r.error != C_INDICATOR_ERROR_OK) {
         fprintf(stderr, "[error] aroon_indicator failed: %d\n", (int) r.error);
@@ -28,13 +28,13 @@ static void bench_aroon(void *ctx_) {
 
 static void bench_tulipc_aroon(void *ctx_) {
     AroonCtx *ctx = ctx_;
-    double options[1] = {ctx->period};
+    double options[AROON_OPTIONS] = {ctx->period};
     int start_index = ti_aroon_start(options);
     if (start_index < 0) { fprintf(stderr, "[error] ti_aroon_start returned negative index\n"); exit(1); }
     int output_len = (int) ctx->stock->len - start_index;
     double *aroon_down = malloc(sizeof(double) * (size_t) output_len);
     double *aroon_up = malloc(sizeof(double) * (size_t) output_len);
-    const double *inputs[2] = {ctx->stock->high, ctx->stock->low};
+    const double *inputs[AROON_INPUTS] = {ctx->stock->high, ctx->stock->low};
     double *outputs[2] = {aroon_down, aroon_up};
     int ret = ti_aroon((int) ctx->stock->len, inputs, options, outputs);
     if (ret != 0) { fprintf(stderr, "[error] ti_aroon returned %d\n", ret); exit(1); }

@@ -237,8 +237,8 @@ mod tests {
             use crate::common::test::build_synthetic_data;
 
             let data_len = 60;
-            let close_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let volume_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1000.0).collect();
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 1);
+            let volume_arr: Vec<f64> = build_synthetic_data(data_len, 3);
 
             let inputs_arr: [*const f64; INPUTS] = [close_arr.as_ptr(), volume_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();
@@ -259,8 +259,8 @@ mod tests {
             use crate::common::test::build_synthetic_data;
 
             let data_len = 60;
-            let close_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let volume_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1000.0).collect();
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 1);
+            let volume_arr: Vec<f64> = build_synthetic_data(data_len, 3);
 
             let inputs_arr: [*const f64; INPUTS] = [close_arr.as_ptr(), volume_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();
@@ -269,8 +269,8 @@ mod tests {
             assert_eq!(result.error, CIndicatorError::Ok);
 
             // Second batch call with exactly 10 elements (batch length)
-            let new_close_arr: Vec<f64> = build_synthetic_data(10).map(|x| x * 100.0).collect();
-            let new_volume_arr: Vec<f64> = build_synthetic_data(10).map(|x| x * 1500.0).collect();
+            let new_close_arr: Vec<f64> = build_synthetic_data(10, 1);
+            let new_volume_arr: Vec<f64> = build_synthetic_data(10, 3);
 
             let new_inputs_arr: [*const f64; INPUTS] =
                 [new_close_arr.as_ptr(), new_volume_arr.as_ptr()];
@@ -294,24 +294,24 @@ mod tests {
 
             // Create inputs for 4 assets
             let asset0_close: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 100.0).collect();
+                build_synthetic_data(data_len, 1);
             let asset0_volume: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 1000.0).collect();
+                build_synthetic_data(data_len, 3);
 
             let asset1_close: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 150.0).collect();
+                build_synthetic_data(data_len, 1);
             let asset1_volume: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 1200.0).collect();
+                build_synthetic_data(data_len, 3);
 
             let asset2_close: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 200.0).collect();
+                build_synthetic_data(data_len, 2);
             let asset2_volume: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 1800.0).collect();
+                build_synthetic_data(data_len, 3);
 
             let asset3_close: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 250.0).collect();
+                build_synthetic_data(data_len, 3);
             let asset3_volume: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 2000.0).collect();
+                build_synthetic_data(data_len, 3);
 
             let inputs_arr0: [*const f64; INPUTS] = [asset0_close.as_ptr(), asset0_volume.as_ptr()];
             let inputs_arr1: [*const f64; INPUTS] = [asset1_close.as_ptr(), asset1_volume.as_ptr()];

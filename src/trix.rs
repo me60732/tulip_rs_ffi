@@ -314,7 +314,7 @@ mod tests {
     fn test_trix_indicator() {
         unsafe {
             let data_len = 30;
-            let inputs_arr: Vec<f64> = build_synthetic_data(data_len);
+            let inputs_arr: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs: *const *const f64 = &inputs_arr.as_ptr();
             let options_arr: [f64; OPTIONS] = [5.0];
             let options: *const f64 = options_arr.as_ptr();
@@ -337,7 +337,7 @@ mod tests {
     fn test_trix_indicator_mandatory_only() {
         unsafe {
             let data_len = 30;
-            let inputs_arr: Vec<f64> = build_synthetic_data(data_len);
+            let inputs_arr: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs: *const *const f64 = &inputs_arr.as_ptr();
             let options_arr: [f64; OPTIONS] = [5.0];
             let options: *const f64 = options_arr.as_ptr();
@@ -356,7 +356,7 @@ mod tests {
     fn test_trix_batch() {
         unsafe {
             let data_len = 30;
-            let inputs_arr: Vec<f64> = build_synthetic_data(data_len);
+            let inputs_arr: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs: *const *const f64 = &inputs_arr.as_ptr();
             let options_arr: [f64; OPTIONS] = [5.0];
             let options: *const f64 = options_arr.as_ptr();
@@ -368,7 +368,7 @@ mod tests {
             let result = trix_indicator(inputs, data_len, options, optional, 3);
             assert_eq!(result.error, CIndicatorError::Ok);
 
-            let new_inputs_arr: Vec<f64> = build_synthetic_data(data_len);
+            let new_inputs_arr: Vec<f64> = build_synthetic_data(data_len, 0);
             let new_inputs: *const *const f64 = &new_inputs_arr.as_ptr();
 
             // Request only mandatory output for batch
@@ -387,8 +387,8 @@ mod tests {
             let num_assets = 2;
 
             // Create inputs for 2 assets
-            let asset0_inputs: Vec<f64> = build_synthetic_data(data_len);
-            let asset1_inputs: Vec<f64> = build_synthetic_data(data_len);
+            let asset0_inputs: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset1_inputs: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr0: [*const f64; INPUTS] = [asset0_inputs.as_ptr()];
             let inputs_arr1: [*const f64; INPUTS] = [asset1_inputs.as_ptr()];
@@ -438,7 +438,7 @@ mod tests {
         unsafe {
             let data_len = 30;
 
-            let inputs_arr: Vec<f64> = build_synthetic_data(data_len);
+            let inputs_arr: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs: *const *const f64 = &inputs_arr.as_ptr();
 
             // Create 2 different option sets

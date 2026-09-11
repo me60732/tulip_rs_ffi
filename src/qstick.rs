@@ -314,6 +314,7 @@ unsafe fn qstick_simd_by_options_n<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test::build_synthetic_data;
     use crate::{tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free};
     use std::ptr;
 
@@ -321,8 +322,8 @@ mod tests {
     fn test_qstick_indicator() {
         unsafe {
             let data_len = 60;
-            let open_arr: Vec<f64> = (1..=data_len).map(|x| x as f64 * 98.0).collect();
-            let close_arr: Vec<f64> = (1..=data_len).map(|x| x as f64 * 102.0).collect();
+            let open_arr: Vec<f64> = build_synthetic_data(data_len, 1);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 1);
 
             let inputs_arr: [*const f64; INPUTS] = [open_arr.as_ptr(), close_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();
@@ -344,8 +345,8 @@ mod tests {
     fn test_qstick_batch() {
         unsafe {
             let data_len = 60;
-            let open_arr: Vec<f64> = (1..=data_len).map(|x| x as f64 * 98.0).collect();
-            let close_arr: Vec<f64> = (1..=data_len).map(|x| x as f64 * 102.0).collect();
+            let open_arr: Vec<f64> = build_synthetic_data(data_len, 1);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 1);
 
             let inputs_arr: [*const f64; INPUTS] = [open_arr.as_ptr(), close_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();
@@ -356,8 +357,8 @@ mod tests {
             let result = qstick_indicator(inputs, data_len, options, ptr::null(), 0);
             assert_eq!(result.error, CIndicatorError::Ok);
 
-            let new_open_arr: Vec<f64> = (61..=70).map(|x| x as f64 * 99.0).collect();
-            let new_close_arr: Vec<f64> = (61..=70).map(|x| x as f64 * 103.0).collect();
+            let new_open_arr: Vec<f64> = build_synthetic_data(10, 1);
+            let new_close_arr: Vec<f64> = build_synthetic_data(10, 1);
 
             let new_inputs_arr: [*const f64; INPUTS] =
                 [new_open_arr.as_ptr(), new_close_arr.as_ptr()];
@@ -378,17 +379,17 @@ mod tests {
             let num_assets = 4;
 
             // Create inputs for 4 assets
-            let asset0_open: Vec<f64> = (1..=data_len).map(|x| x as f64 * 98.0).collect();
-            let asset0_close: Vec<f64> = (1..=data_len).map(|x| x as f64 * 102.0).collect();
+            let asset0_open: Vec<f64> = build_synthetic_data(data_len, 1);
+            let asset0_close: Vec<f64> = build_synthetic_data(data_len, 1);
 
-            let asset1_open: Vec<f64> = (21..=40).map(|x| x as f64 * 148.0).collect();
-            let asset1_close: Vec<f64> = (21..=40).map(|x| x as f64 * 153.0).collect();
+            let asset1_open: Vec<f64> = build_synthetic_data(20, 1);
+            let asset1_close: Vec<f64> = build_synthetic_data(20, 1);
 
-            let asset2_open: Vec<f64> = (41..=60).map(|x| x as f64 * 198.0).collect();
-            let asset2_close: Vec<f64> = (41..=60).map(|x| x as f64 * 203.0).collect();
+            let asset2_open: Vec<f64> = build_synthetic_data(20, 2);
+            let asset2_close: Vec<f64> = build_synthetic_data(20, 2);
 
-            let asset3_open: Vec<f64> = (61..=80).map(|x| x as f64 * 248.0).collect();
-            let asset3_close: Vec<f64> = (61..=80).map(|x| x as f64 * 253.0).collect();
+            let asset3_open: Vec<f64> = build_synthetic_data(20, 1);
+            let asset3_close: Vec<f64> = build_synthetic_data(20, 1);
 
             let inputs_arr0: [*const f64; INPUTS] = [asset0_open.as_ptr(), asset0_close.as_ptr()];
             let inputs_arr1: [*const f64; INPUTS] = [asset1_open.as_ptr(), asset1_close.as_ptr()];
@@ -424,8 +425,8 @@ mod tests {
             let data_len = 60;
             let num_option_sets = 2;
 
-            let open_arr: Vec<f64> = (1..=data_len).map(|x| x as f64 * 98.0).collect();
-            let close_arr: Vec<f64> = (1..=data_len).map(|x| x as f64 * 102.0).collect();
+            let open_arr: Vec<f64> = build_synthetic_data(data_len, 1);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 1);
 
             let inputs_arr: [*const f64; INPUTS] = [open_arr.as_ptr(), close_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();

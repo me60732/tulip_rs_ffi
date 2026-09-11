@@ -9,8 +9,8 @@ typedef struct {
 
 static void bench_aroonosc(void *ctx_) {
     AroonOscCtx *ctx = ctx_;
-    const double *inputs[2] = {ctx->stock->high, ctx->stock->low};
-    double opts[1] = {ctx->period};
+    const double *inputs[AROONOSC_INPUTS] = {ctx->stock->high, ctx->stock->low};
+    double opts[AROONOSC_OPTIONS] = {ctx->period};
     bool optionals[2] = {true, true}; // aroon_down, aroon_up
     struct CIndicatorResult r = aroonosc_indicator(inputs, ctx->stock->len, opts, optionals, 2);
     if (r.error != C_INDICATOR_ERROR_OK) {
@@ -28,12 +28,12 @@ static void bench_aroonosc(void *ctx_) {
 
 static void bench_tulipc_aroonosc(void *ctx_) {
     AroonOscCtx *ctx = ctx_;
-    double options[1] = {ctx->period};
+    double options[AROONOSC_OPTIONS] = {ctx->period};
     int start_index = ti_aroonosc_start(options);
     if (start_index < 0) { fprintf(stderr, "[error] ti_aroonosc_start returned negative index\n"); exit(1); }
     int output_len = (int) ctx->stock->len - start_index;
     double *output = malloc(sizeof(double) * (size_t) output_len);
-    const double *inputs[2] = {ctx->stock->high, ctx->stock->low};
+    const double *inputs[AROONOSC_INPUTS] = {ctx->stock->high, ctx->stock->low};
     double *outputs[1] = {output};
     int ret = ti_aroonosc((int) ctx->stock->len, inputs, options, outputs);
     if (ret != 0) { fprintf(stderr, "[error] ti_aroonosc returned %d\n", ret); exit(1); }

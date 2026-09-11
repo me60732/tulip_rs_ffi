@@ -314,12 +314,10 @@ mod tests {
             use crate::common::test::build_synthetic_data;
 
             let data_len = 20;
-            let high_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let low_arr: Vec<f64> = build_synthetic_data(data_len)
-                .map(|x| (x - 50.0) * 2.0)
-                .collect();
-            let close_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let volume_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1000.0).collect();
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 1);
+            let volume_arr: Vec<f64> = build_synthetic_data(data_len, 3);
 
             let inputs_arr: [*const f64; INPUTS] = [
                 high_arr.as_ptr(),
@@ -351,12 +349,10 @@ mod tests {
             use crate::common::test::build_synthetic_data;
 
             let data_len = 20;
-            let high_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let low_arr: Vec<f64> = build_synthetic_data(data_len)
-                .map(|x| (x - 50.0) * 2.0)
-                .collect();
-            let close_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let volume_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1000.0).collect();
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 1);
+            let volume_arr: Vec<f64> = build_synthetic_data(data_len, 3);
 
             let inputs_arr: [*const f64; INPUTS] = [
                 high_arr.as_ptr(),
@@ -372,11 +368,10 @@ mod tests {
             assert_eq!(result.error, CIndicatorError::Ok);
 
             // Second batch call with exactly 10 elements (batch length)
-            let new_high_arr: Vec<f64> = build_synthetic_data(10).map(|x| x * 100.0).collect();
-            let new_low_arr: Vec<f64> =
-                build_synthetic_data(10).map(|x| (x - 50.0) * 2.0).collect();
-            let new_close_arr: Vec<f64> = build_synthetic_data(10).map(|x| x * 100.0).collect();
-            let new_volume_arr: Vec<f64> = build_synthetic_data(10).map(|x| x * 1000.0).collect();
+            let new_high_arr: Vec<f64> = build_synthetic_data(10, 2);
+            let new_low_arr: Vec<f64> = build_synthetic_data(10, 0);
+            let new_close_arr: Vec<f64> = build_synthetic_data(10, 1);
+            let new_volume_arr: Vec<f64> = build_synthetic_data(10, 3);
 
             let new_inputs_arr: [*const f64; INPUTS] = [
                 new_high_arr.as_ptr(),
@@ -403,23 +398,15 @@ mod tests {
             let num_assets = 2;
 
             // Create inputs for 2 assets
-            let asset0_high: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let asset0_low: Vec<f64> = build_synthetic_data(data_len)
-                .map(|x| (x - 50.0) * 2.0)
-                .collect();
-            let asset0_close: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let asset0_volume: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 1000.0).collect();
+            let asset0_high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let asset0_low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset0_close: Vec<f64> = build_synthetic_data(data_len, 1);
+            let asset0_volume: Vec<f64> = build_synthetic_data(data_len, 3);
 
-            let asset1_high: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let asset1_low: Vec<f64> = build_synthetic_data(data_len)
-                .map(|x| (x - 50.0) * 2.0)
-                .collect();
-            let asset1_close: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let asset1_volume: Vec<f64> =
-                build_synthetic_data(data_len).map(|x| x * 1000.0).collect();
+            let asset1_high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let asset1_low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset1_close: Vec<f64> = build_synthetic_data(data_len, 1);
+            let asset1_volume: Vec<f64> = build_synthetic_data(data_len, 3);
 
             let inputs_arr0: [*const f64; INPUTS] = [
                 asset0_high.as_ptr(),
@@ -460,12 +447,10 @@ mod tests {
             // Must satisfy min_data for *both* option sets used below.
             let data_len = 40;
 
-            let high_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let low_arr: Vec<f64> = build_synthetic_data(data_len)
-                .map(|x| (x - 50.0) * 2.0)
-                .collect();
-            let close_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 100.0).collect();
-            let volume_arr: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1000.0).collect();
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 1);
+            let volume_arr: Vec<f64> = build_synthetic_data(data_len, 3);
 
             let inputs_arr: [*const f64; INPUTS] = [
                 high_arr.as_ptr(),

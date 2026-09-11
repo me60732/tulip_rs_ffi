@@ -333,7 +333,7 @@ mod tests {
         unsafe {
             let period = 20.0;
             let data_len = 60;
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
             let options_arr = [period];
 
             let inputs_ptr = &inputs_arr as *const _ as *const f64;
@@ -363,7 +363,7 @@ mod tests {
         unsafe {
             let period = 20.0;
             let data_len = 60;
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
             let options_arr = [period];
 
             let inputs_ptr = &inputs_arr as *const _ as *const f64;
@@ -386,7 +386,7 @@ mod tests {
             let state = result.state;
 
             // Second batch call with additional data
-            let additional_data = build_synthetic_data(30);
+            let additional_data = build_synthetic_data(30, 0);
             let inputs_ptr2 = &additional_data as *const _ as *const f64;
             let inputs2 = [inputs_ptr2];
 
@@ -412,8 +412,8 @@ mod tests {
             let data_len = 60;
             let num_assets = 2;
 
-            let inputs_arr1 = build_synthetic_data(data_len);
-            let inputs_arr2 = build_synthetic_data(data_len);
+            let inputs_arr1 = build_synthetic_data(data_len, 0);
+            let inputs_arr2 = build_synthetic_data(data_len, 0);
             let options_arr = [period];
 
             let inputs_ptr1 = &inputs_arr1 as *const _ as *const f64;
@@ -456,7 +456,7 @@ mod tests {
             let data_len = 60;
             let num_option_sets = 2;
 
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
             let options_arr1 = [period1];
             let options_arr2 = [period2];
 

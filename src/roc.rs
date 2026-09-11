@@ -301,7 +301,7 @@ mod tests {
     fn test_roc_indicator() {
         unsafe {
             let data_len = 60;
-            let real_arr: Vec<f64> = build_synthetic_data(data_len);
+            let real_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] = [real_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();
@@ -327,7 +327,7 @@ mod tests {
     fn test_roc_indicator_nooptional() {
         unsafe {
             let data_len = 60;
-            let real_arr: Vec<f64> = build_synthetic_data(data_len);
+            let real_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] = [real_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();
@@ -349,7 +349,7 @@ mod tests {
     fn test_roc_batch() {
         unsafe {
             let data_len = 60;
-            let real_arr: Vec<f64> = build_synthetic_data(data_len);
+            let real_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] = [real_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();
@@ -360,7 +360,7 @@ mod tests {
             let result = roc_indicator(inputs, data_len, options, ptr::null(), 0);
             assert_eq!(result.error, CIndicatorError::Ok);
 
-            let new_real_arr: Vec<f64> = (61..=70).map(|x| x as f64 * 105.0).collect();
+            let new_real_arr: Vec<f64> = build_synthetic_data(10, 1);
 
             let new_inputs_arr: [*const f64; INPUTS] = [new_real_arr.as_ptr()];
             let new_inputs: *const *const f64 = new_inputs_arr.as_ptr();
@@ -380,10 +380,10 @@ mod tests {
             let num_assets = 4;
 
             // Create inputs for 4 assets
-            let asset0_real: Vec<f64> = build_synthetic_data(data_len);
-            let asset1_real: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 1.5).collect();
-            let asset2_real: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 2.0).collect();
-            let asset3_real: Vec<f64> = build_synthetic_data(data_len).map(|x| x * 2.5).collect();
+            let asset0_real: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset1_real: Vec<f64> = build_synthetic_data(data_len, 1);
+            let asset2_real: Vec<f64> = build_synthetic_data(data_len, 2);
+            let asset3_real: Vec<f64> = build_synthetic_data(data_len, 3);
 
             let inputs_arr0: [*const f64; INPUTS] = [asset0_real.as_ptr()];
             let inputs_arr1: [*const f64; INPUTS] = [asset1_real.as_ptr()];
@@ -417,7 +417,7 @@ mod tests {
         unsafe {
             let data_len = 60;
 
-            let real_arr: Vec<f64> = build_synthetic_data(data_len);
+            let real_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] = [real_arr.as_ptr()];
             let inputs: *const *const f64 = inputs_arr.as_ptr();

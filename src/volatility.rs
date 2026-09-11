@@ -332,6 +332,7 @@ unsafe fn volatility_simd_by_options_n<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test::build_synthetic_data;
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
     };
@@ -358,7 +359,7 @@ mod tests {
     fn test_volatility_indicator() {
         unsafe {
             let data_len = 60;
-            let real: Vec<f64> = (1..=data_len).map(|i| i as f64 + 100.0).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
 
             // Bind inputs to local first (dangling temp segfault rule)
             let inputs_ptr: [*const f64; INPUTS] = [real.as_ptr()];
@@ -378,7 +379,7 @@ mod tests {
     fn test_volatility_batch() {
         unsafe {
             let data_len = 60;
-            let real: Vec<f64> = (1..=data_len).map(|i| i as f64 + 100.0).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
 
             // Bind inputs to local first (dangling temp segfault rule)
             let inputs_ptr: [*const f64; INPUTS] = [real.as_ptr()];
@@ -393,7 +394,7 @@ mod tests {
 
             // Second batch with more data
             let extra_data_len = 10;
-            let real_extra: Vec<f64> = (61..=70).map(|i| i as f64 + 100.0).collect();
+            let real_extra: Vec<f64> = build_synthetic_data(10, 0);
 
             let inputs_ptr_extra: [*const f64; INPUTS] = [real_extra.as_ptr()];
             let inputs_extra = inputs_ptr_extra.as_ptr();
@@ -413,8 +414,8 @@ mod tests {
     fn test_volatility_simd_by_assets() {
         unsafe {
             let data_len = 60;
-            let real: Vec<f64> = (1..=data_len).map(|i| i as f64 + 100.0).collect();
-            let real2: Vec<f64> = (21..=80).map(|i| i as f64 + 105.0).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
+            let real2: Vec<f64> = build_synthetic_data(60, 2);
 
             // Create a proper nested array of asset pointers
             // For SIMD by assets with INPUTS=1:
@@ -455,7 +456,7 @@ mod tests {
     fn test_volatility_simd_by_options() {
         unsafe {
             let data_len = 60;
-            let real: Vec<f64> = (1..=data_len).map(|i| i as f64 + 100.0).collect();
+            let real: Vec<f64> = build_synthetic_data(data_len, 0);
 
             // Bind inputs to local first
             let inputs_ptr: [*const f64; INPUTS] = [real.as_ptr()];

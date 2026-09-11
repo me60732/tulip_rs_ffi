@@ -222,6 +222,7 @@ unsafe fn bop_simd_by_assets_n<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test::build_synthetic_data;
 
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
@@ -247,10 +248,10 @@ mod tests {
         unsafe {
             // Create test data
             let data_len = 20;
-            let open: Vec<f64> = (0..data_len).map(|i| i as f64 + 100.0).collect();
-            let high: Vec<f64> = (0..data_len).map(|i| i as f64 + 105.0).collect();
-            let low: Vec<f64> = (0..data_len).map(|i| i as f64 + 95.0).collect();
-            let close: Vec<f64> = (0..data_len).map(|i| i as f64 + 102.0).collect();
+            let open: Vec<f64> = build_synthetic_data(data_len, 1);
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
             let inputs = [open.as_ptr(), high.as_ptr(), low.as_ptr(), close.as_ptr()];
             // OPTIONS=0, create empty options array
@@ -280,10 +281,10 @@ mod tests {
     fn test_bop_batch() {
         unsafe {
             let data_len = 20;
-            let open: Vec<f64> = (0..data_len).map(|i| i as f64 + 100.0).collect();
-            let high: Vec<f64> = (0..data_len).map(|i| i as f64 + 105.0).collect();
-            let low: Vec<f64> = (0..data_len).map(|i| i as f64 + 95.0).collect();
-            let close: Vec<f64> = (0..data_len).map(|i| i as f64 + 102.0).collect();
+            let open: Vec<f64> = build_synthetic_data(data_len, 1);
+            let high: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close: Vec<f64> = build_synthetic_data(data_len, 1);
 
             let inputs = [open.as_ptr(), high.as_ptr(), low.as_ptr(), close.as_ptr()];
             // OPTIONS=0
@@ -300,10 +301,10 @@ mod tests {
             assert_eq!(result.error, CIndicatorError::Ok);
 
             // Second call to batch with new data
-            let more_open: Vec<f64> = (0..10).map(|i| i as f64 + 200.0).collect();
-            let more_high: Vec<f64> = (0..10).map(|i| i as f64 + 205.0).collect();
-            let more_low: Vec<f64> = (0..10).map(|i| i as f64 + 195.0).collect();
-            let more_close: Vec<f64> = (0..10).map(|i| i as f64 + 202.0).collect();
+            let more_open: Vec<f64> = build_synthetic_data(10, 1);
+            let more_high: Vec<f64> = build_synthetic_data(10, 2);
+            let more_low: Vec<f64> = build_synthetic_data(10, 0);
+            let more_close: Vec<f64> = build_synthetic_data(10, 1);
 
             let new_inputs = [
                 more_open.as_ptr(),
@@ -329,15 +330,15 @@ mod tests {
             let num_assets = 2;
 
             // Create inputs for 2 assets
-            let open1: Vec<f64> = (0..data_len).map(|i| i as f64 + 100.0).collect();
-            let high1: Vec<f64> = (0..data_len).map(|i| i as f64 + 105.0).collect();
-            let low1: Vec<f64> = (0..data_len).map(|i| i as f64 + 95.0).collect();
-            let close1: Vec<f64> = (0..data_len).map(|i| i as f64 + 102.0).collect();
+            let open1: Vec<f64> = build_synthetic_data(data_len, 1);
+            let high1: Vec<f64> = build_synthetic_data(data_len, 2);
+            let low1: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close1: Vec<f64> = build_synthetic_data(data_len, 1);
 
-            let open2: Vec<f64> = (0..data_len).map(|i| i as f64 + 150.0).collect();
-            let high2: Vec<f64> = (0..data_len).map(|i| i as f64 + 155.0).collect();
-            let low2: Vec<f64> = (0..data_len).map(|i| i as f64 + 145.0).collect();
-            let close2: Vec<f64> = (0..data_len).map(|i| i as f64 + 152.0).collect();
+            let open2: Vec<f64> = build_synthetic_data(data_len, 2);
+            let high2: Vec<f64> = build_synthetic_data(data_len, 3);
+            let low2: Vec<f64> = build_synthetic_data(data_len, 1);
+            let close2: Vec<f64> = build_synthetic_data(data_len, 2);
 
             let inputs1 = [
                 open1.as_ptr(),

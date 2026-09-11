@@ -335,7 +335,7 @@ mod tests {
     fn test_linreg_indicator() {
         unsafe {
             let data_len = 60;
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
             let inputs_ptr = inputs_arr.as_ptr();
             let inputs = &inputs_ptr as *const *const f64;
 
@@ -362,7 +362,7 @@ mod tests {
     fn test_linreg_batch() {
         unsafe {
             let data_len = 60;
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
             let inputs_ptr = inputs_arr.as_ptr();
             let inputs = &inputs_ptr as *const *const f64;
 
@@ -376,7 +376,7 @@ mod tests {
             let state = result.state;
 
             // Second call with batch
-            let inputs_arr2 = build_synthetic_data(data_len);
+            let inputs_arr2 = build_synthetic_data(data_len, 0);
             let inputs_ptr2 = inputs_arr2.as_ptr();
             let inputs2 = &inputs_ptr2 as *const *const f64;
 
@@ -395,8 +395,8 @@ mod tests {
             let data_len = 60;
 
             // Build inputs for 2 assets: [asset1_inputs, asset2_inputs]
-            let inputs_arr1 = build_synthetic_data(data_len);
-            let inputs_arr2 = build_synthetic_data(data_len);
+            let inputs_arr1 = build_synthetic_data(data_len, 0);
+            let inputs_arr2 = build_synthetic_data(data_len, 0);
 
             let inputs_ptr1 = inputs_arr1.as_ptr();
             let inputs_ptr2 = inputs_arr2.as_ptr();
@@ -440,7 +440,7 @@ mod tests {
             let num_option_sets = 2;
             let data_len = 60;
 
-            let inputs_arr = build_synthetic_data(data_len);
+            let inputs_arr = build_synthetic_data(data_len, 0);
             let inputs_ptr = inputs_arr.as_ptr();
             let inputs = &inputs_ptr as *const *const f64;
 

@@ -224,7 +224,7 @@ typedef void (*BenchFn)(void *ctx);
 static TimingResult time_fn(BenchFn fn, void *ctx, int number, int repeat, int warmup) {
     for (int i = 0; i < warmup; i++) fn(ctx);
 
-    double *samples_ns = malloc(sizeof(double) * repeat);
+    double *samples_ns = calloc((size_t) repeat, sizeof(double));
     for (int r = 0; r < repeat; r++) {
         double start = now_ns();
         for (int n = 0; n < number; n++) fn(ctx);

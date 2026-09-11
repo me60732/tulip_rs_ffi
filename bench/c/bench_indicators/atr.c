@@ -10,8 +10,8 @@ typedef struct {
 
 static void bench_atr(void *ctx_) {
     AtrCtx *ctx = ctx_;
-    const double *inputs[3] = {ctx->stock->high, ctx->stock->low, ctx->stock->close};
-    double opts[1] = {ctx->period};
+    const double *inputs[ATR_INPUTS] = {ctx->stock->high, ctx->stock->low, ctx->stock->close};
+    double opts[ATR_OPTIONS] = {ctx->period};
     bool optionals[1] = {true}; // tr
     struct CIndicatorResult r = atr_indicator(inputs, ctx->stock->len, opts, optionals, 1);
     if (r.error != C_INDICATOR_ERROR_OK) {
@@ -29,12 +29,12 @@ static void bench_atr(void *ctx_) {
 
 static void bench_tulipc_atr(void *ctx_) {
     AtrCtx *ctx = ctx_;
-    double options[1] = {ctx->period};
+    double options[ATR_OPTIONS] = {ctx->period};
     int start_index = ti_atr_start(options);
     if (start_index < 0) { fprintf(stderr, "[error] ti_atr_start returned negative index\n"); exit(1); }
     int output_len = (int) ctx->stock->len - start_index;
     double *output = malloc(sizeof(double) * (size_t) output_len);
-    const double *inputs[3] = {ctx->stock->high, ctx->stock->low, ctx->stock->close};
+    const double *inputs[ATR_INPUTS] = {ctx->stock->high, ctx->stock->low, ctx->stock->close};
     double *outputs[1] = {output};
     int ret = ti_atr((int) ctx->stock->len, inputs, options, outputs);
     if (ret != 0) { fprintf(stderr, "[error] ti_atr returned %d\n", ret); exit(1); }

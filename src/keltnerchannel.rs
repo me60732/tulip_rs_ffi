@@ -383,9 +383,9 @@ mod tests {
         unsafe {
             let options = [20.0, 2.0];
             let len = min_data(&options);
-            let high = build_synthetic_data(len);
-            let low = build_synthetic_data(len);
-            let close = build_synthetic_data(len);
+            let high = build_synthetic_data(len, 0);
+            let low = build_synthetic_data(len, 0);
+            let close = build_synthetic_data(len, 0);
 
             let inputs: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
 
@@ -409,9 +409,9 @@ mod tests {
         unsafe {
             let options = [20.0, 2.0];
             let len1 = min_data(&options);
-            let high1 = build_synthetic_data(len1);
-            let low1 = build_synthetic_data(len1);
-            let close1 = build_synthetic_data(len1);
+            let high1 = build_synthetic_data(len1, 0);
+            let low1 = build_synthetic_data(len1, 0);
+            let close1 = build_synthetic_data(len1, 0);
 
             let inputs1: [*const f64; INPUTS] = [high1.as_ptr(), low1.as_ptr(), close1.as_ptr()];
 
@@ -427,9 +427,9 @@ mod tests {
             let state = result.state;
 
             let len2 = 30;
-            let high2 = build_synthetic_data(len2);
-            let low2 = build_synthetic_data(len2);
-            let close2 = build_synthetic_data(len2);
+            let high2 = build_synthetic_data(len2, 0);
+            let low2 = build_synthetic_data(len2, 0);
+            let close2 = build_synthetic_data(len2, 0);
 
             let inputs2: [*const f64; INPUTS] = [high2.as_ptr(), low2.as_ptr(), close2.as_ptr()];
 
@@ -449,12 +449,12 @@ mod tests {
             let options = [20.0, 2.0];
             let len = min_data(&options);
 
-            let high1 = build_synthetic_data(len);
-            let low1 = build_synthetic_data(len);
-            let close1 = build_synthetic_data(len);
-            let high2 = build_synthetic_data(len);
-            let low2 = build_synthetic_data(len);
-            let close2 = build_synthetic_data(len);
+            let high1 = build_synthetic_data(len, 0);
+            let low1 = build_synthetic_data(len, 0);
+            let close1 = build_synthetic_data(len, 0);
+            let high2 = build_synthetic_data(len, 0);
+            let low2 = build_synthetic_data(len, 0);
+            let close2 = build_synthetic_data(len, 0);
 
             let inputs_array: [*const f64; INPUTS] =
                 [high1.as_ptr(), low1.as_ptr(), close1.as_ptr()];
@@ -491,9 +491,9 @@ mod tests {
             // Must satisfy min_data for *all* option sets used below.
             let len = min_data(&[20.0, 2.0]).max(min_data(&[25.0, 2.5]));
 
-            let high = build_synthetic_data(len);
-            let low = build_synthetic_data(len);
-            let close = build_synthetic_data(len);
+            let high = build_synthetic_data(len, 0);
+            let low = build_synthetic_data(len, 0);
+            let close = build_synthetic_data(len, 0);
 
             let inputs: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
 

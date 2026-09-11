@@ -351,9 +351,9 @@ mod tests {
     fn test_elderray_indicator() {
         unsafe {
             let data_len = 20;
-            let high_arr: Vec<f64> = build_synthetic_data(data_len);
-            let low_arr: Vec<f64> = build_synthetic_data(data_len);
-            let close_arr: Vec<f64> = build_synthetic_data(data_len);
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] =
                 [high_arr.as_ptr(), low_arr.as_ptr(), close_arr.as_ptr()];
@@ -376,9 +376,9 @@ mod tests {
     fn test_elderray_batch() {
         unsafe {
             let data_len = 20;
-            let high_arr: Vec<f64> = build_synthetic_data(data_len);
-            let low_arr: Vec<f64> = build_synthetic_data(data_len);
-            let close_arr: Vec<f64> = build_synthetic_data(data_len);
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] =
                 [high_arr.as_ptr(), low_arr.as_ptr(), close_arr.as_ptr()];
@@ -419,13 +419,13 @@ mod tests {
             let num_assets = 2;
 
             // Create inputs for 2 assets
-            let asset0_high: Vec<f64> = build_synthetic_data(data_len);
-            let asset0_low: Vec<f64> = build_synthetic_data(data_len);
-            let asset0_close: Vec<f64> = build_synthetic_data(data_len);
+            let asset0_high: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset0_low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset0_close: Vec<f64> = build_synthetic_data(data_len, 0);
 
-            let asset1_high: Vec<f64> = build_synthetic_data(data_len);
-            let asset1_low: Vec<f64> = build_synthetic_data(data_len);
-            let asset1_close: Vec<f64> = build_synthetic_data(data_len);
+            let asset1_high: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset1_low: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset1_close: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr0: [*const f64; INPUTS] = [
                 asset0_high.as_ptr(),
@@ -466,9 +466,9 @@ mod tests {
         unsafe {
             let data_len = 20;
 
-            let high_arr: Vec<f64> = build_synthetic_data(data_len);
-            let low_arr: Vec<f64> = build_synthetic_data(data_len);
-            let close_arr: Vec<f64> = build_synthetic_data(data_len);
+            let high_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let low_arr: Vec<f64> = build_synthetic_data(data_len, 0);
+            let close_arr: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let inputs_arr: [*const f64; INPUTS] =
                 [high_arr.as_ptr(), low_arr.as_ptr(), close_arr.as_ptr()];

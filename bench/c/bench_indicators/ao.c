@@ -9,7 +9,7 @@ typedef struct {
 
 static void bench_ao(void *ctx_) {
     AoCtx *ctx = ctx_;
-    const double *inputs[2] = {ctx->stock->high, ctx->stock->low};
+    const double *inputs[AO_INPUTS] = {ctx->stock->high, ctx->stock->low};
     bool optionals[3] = {true, true, true}; // short_sma, long_sma, medprice
     struct CIndicatorResult r = ao_indicator(inputs, ctx->stock->len, NULL, optionals, 3);
     if (r.error != C_INDICATOR_ERROR_OK) {
@@ -28,12 +28,11 @@ static void bench_ao(void *ctx_) {
 static void bench_tulipc_ao(void *ctx_) {
     AoCtx *ctx = ctx_;
     size_t len = ctx->stock->len;
-    double options[0] = {};
-    int start_index = ti_ao_start(options);
+    int start_index = ti_ao_start(NULL);
     if (start_index < 0) { fprintf(stderr, "[error] ti_ao_start returned negative index\n"); exit(1); }
     int output_len = (int) len - start_index;
     double *output = malloc(sizeof(double) * (size_t) output_len);
-    const double *inputs[2] = {ctx->stock->high, ctx->stock->low};
+    const double *inputs[AO_INPUTS] = {ctx->stock->high, ctx->stock->low};
     double *outputs[1] = {output};
     int ret = ti_ao((int) len, inputs, options, outputs);
     if (ret != 0) { fprintf(stderr, "[error] ti_ao returned %d\n", ret); exit(1); }

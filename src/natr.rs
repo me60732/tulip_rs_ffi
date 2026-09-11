@@ -329,9 +329,9 @@ mod tests {
         let optional = [true; 2];
 
         unsafe {
-            let high = build_synthetic_data(data_len);
-            let low = build_synthetic_data(data_len);
-            let close = build_synthetic_data(data_len);
+            let high = build_synthetic_data(data_len, 0);
+            let low = build_synthetic_data(data_len, 0);
+            let close = build_synthetic_data(data_len, 0);
             let inputs: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
             let result = natr_indicator(
                 inputs.as_ptr(),
@@ -358,9 +358,9 @@ mod tests {
         let options: [f64; OPTIONS] = [14.0];
 
         unsafe {
-            let high = build_synthetic_data(data_len);
-            let low = build_synthetic_data(data_len);
-            let close = build_synthetic_data(data_len);
+            let high = build_synthetic_data(data_len, 0);
+            let low = build_synthetic_data(data_len, 0);
+            let close = build_synthetic_data(data_len, 0);
             let inputs: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
             let result = natr_indicator(
                 inputs.as_ptr(),
@@ -374,9 +374,9 @@ mod tests {
             let state = result.state;
             tulip_ffi_result_free(result);
 
-            let more_high = build_synthetic_data(data_len);
-            let more_low = build_synthetic_data(data_len);
-            let more_close = build_synthetic_data(data_len);
+            let more_high = build_synthetic_data(data_len, 0);
+            let more_low = build_synthetic_data(data_len, 0);
+            let more_close = build_synthetic_data(data_len, 0);
             let more_inputs: [*const f64; INPUTS] =
                 [more_high.as_ptr(), more_low.as_ptr(), more_close.as_ptr()];
 
@@ -398,18 +398,18 @@ mod tests {
         let options: [f64; OPTIONS] = [14.0];
 
         unsafe {
-            let h0 = build_synthetic_data(data_len);
-            let l0 = build_synthetic_data(data_len);
-            let c0 = build_synthetic_data(data_len);
-            let h1 = build_synthetic_data(data_len);
-            let l1 = build_synthetic_data(data_len);
-            let c1 = build_synthetic_data(data_len);
-            let h2 = build_synthetic_data(data_len);
-            let l2 = build_synthetic_data(data_len);
-            let c2 = build_synthetic_data(data_len);
-            let h3 = build_synthetic_data(data_len);
-            let l3 = build_synthetic_data(data_len);
-            let c3 = build_synthetic_data(data_len);
+            let h0 = build_synthetic_data(data_len, 0);
+            let l0 = build_synthetic_data(data_len, 0);
+            let c0 = build_synthetic_data(data_len, 0);
+            let h1 = build_synthetic_data(data_len, 0);
+            let l1 = build_synthetic_data(data_len, 0);
+            let c1 = build_synthetic_data(data_len, 0);
+            let h2 = build_synthetic_data(data_len, 0);
+            let l2 = build_synthetic_data(data_len, 0);
+            let c2 = build_synthetic_data(data_len, 0);
+            let h3 = build_synthetic_data(data_len, 0);
+            let l3 = build_synthetic_data(data_len, 0);
+            let c3 = build_synthetic_data(data_len, 0);
             let asset_inputs: [[*const f64; INPUTS]; NUM_ASSETS] = [
                 [h0.as_ptr(), l0.as_ptr(), c0.as_ptr()],
                 [h1.as_ptr(), l1.as_ptr(), c1.as_ptr()],
@@ -449,9 +449,9 @@ mod tests {
         let data_len = 60;
 
         unsafe {
-            let high = build_synthetic_data(data_len);
-            let low = build_synthetic_data(data_len);
-            let close = build_synthetic_data(data_len);
+            let high = build_synthetic_data(data_len, 0);
+            let low = build_synthetic_data(data_len, 0);
+            let close = build_synthetic_data(data_len, 0);
             let inputs: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr(), close.as_ptr()];
             let o0: [f64; OPTIONS] = [12.0];
             let o1: [f64; OPTIONS] = [14.0];

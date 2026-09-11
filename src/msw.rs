@@ -318,7 +318,7 @@ mod tests {
     fn test_msw_indicator() {
         unsafe {
             let data_len = 60;
-            let inputs_data: Vec<f64> = build_synthetic_data(data_len);
+            let inputs_data: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs_ptr = Box::into_raw(Box::new(inputs_data)) as *const f64;
             let inputs = [&inputs_ptr];
 
@@ -345,7 +345,7 @@ mod tests {
     fn test_msw_batch() {
         unsafe {
             let data_len = 60;
-            let inputs_data: Vec<f64> = build_synthetic_data(data_len);
+            let inputs_data: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs_ptr = Box::into_raw(Box::new(inputs_data)) as *const f64;
             let inputs = [&inputs_ptr];
 
@@ -366,7 +366,7 @@ mod tests {
             let state = result.state;
 
             // Additional batch call
-            let more_data: Vec<f64> = build_synthetic_data(30);
+            let more_data: Vec<f64> = build_synthetic_data(30, 0);
             let more_ptr = Box::into_raw(Box::new(more_data)) as *const f64;
             let more_inputs = [&more_ptr];
 
@@ -391,8 +391,8 @@ mod tests {
             const NUM_ASSETS: usize = 2;
             let data_len = 60;
 
-            let asset1_data: Vec<f64> = build_synthetic_data(data_len);
-            let asset2_data: Vec<f64> = build_synthetic_data(data_len);
+            let asset1_data: Vec<f64> = build_synthetic_data(data_len, 0);
+            let asset2_data: Vec<f64> = build_synthetic_data(data_len, 0);
 
             let asset1_ptr = Box::into_raw(Box::new(asset1_data)) as *const f64;
             let asset2_ptr = Box::into_raw(Box::new(asset2_data)) as *const f64;
@@ -427,7 +427,7 @@ mod tests {
         unsafe {
             let data_len = 60;
 
-            let inputs_data: Vec<f64> = build_synthetic_data(data_len);
+            let inputs_data: Vec<f64> = build_synthetic_data(data_len, 0);
             let inputs_ptr = Box::into_raw(Box::new(inputs_data)) as *const f64;
             let inputs = [&inputs_ptr];
 

@@ -10,8 +10,8 @@ typedef struct {
 
 static void bench_apo(void *ctx_) {
     ApoCtx *ctx = ctx_;
-    const double *inputs[1] = {ctx->stock->close};
-    double opts[2] = {ctx->short_period, ctx->long_period};
+    const double *inputs[APO_INPUTS] = {ctx->stock->close};
+    double opts[APO_OPTIONS] = {ctx->short_period, ctx->long_period};
     bool optionals[2] = {true, true}; // short_ema, long_ema
     struct CIndicatorResult r = apo_indicator(inputs, ctx->stock->len, opts, optionals, 2);
     if (r.error != C_INDICATOR_ERROR_OK) {
@@ -29,12 +29,12 @@ static void bench_apo(void *ctx_) {
 
 static void bench_tulipc_apo(void *ctx_) {
     ApoCtx *ctx = ctx_;
-    double options[2] = {ctx->short_period, ctx->long_period};
+    double options[APO_OPTIONS] = {ctx->short_period, ctx->long_period};
     int start_index = ti_apo_start(options);
     if (start_index < 0) { fprintf(stderr, "[error] ti_apo_start returned negative index\n"); exit(1); }
     int output_len = (int) ctx->stock->len - start_index;
     double *output = malloc(sizeof(double) * (size_t) output_len);
-    const double *inputs[1] = {ctx->stock->close};
+    const double *inputs[APO_INPUTS] = {ctx->stock->close};
     double *outputs[1] = {output};
     int ret = ti_apo((int) ctx->stock->len, inputs, options, outputs);
     if (ret != 0) { fprintf(stderr, "[error] ti_apo returned %d\n", ret); exit(1); }

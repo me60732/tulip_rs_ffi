@@ -326,7 +326,7 @@ mod tests {
         let options: [f64; OPTIONS] = [14.0];
 
         unsafe {
-            let real = build_synthetic_data(data_len);
+            let real = build_synthetic_data(data_len, 0);
             let inputs: [*const f64; INPUTS] = [real.as_ptr()];
             let result = mom_indicator(
                 inputs.as_ptr(),
@@ -353,7 +353,7 @@ mod tests {
         let options: [f64; OPTIONS] = [14.0];
 
         unsafe {
-            let real = build_synthetic_data(data_len);
+            let real = build_synthetic_data(data_len, 0);
             let inputs: [*const f64; INPUTS] = [real.as_ptr()];
             let result = mom_indicator(
                 inputs.as_ptr(),
@@ -367,7 +367,7 @@ mod tests {
             let state = result.state;
             tulip_ffi_result_free(result);
 
-            let more_real = build_synthetic_data(data_len);
+            let more_real = build_synthetic_data(data_len, 0);
             let more_inputs: [*const f64; INPUTS] = [more_real.as_ptr()];
 
             let batch_result =
@@ -388,10 +388,10 @@ mod tests {
         let options: [f64; OPTIONS] = [14.0];
 
         unsafe {
-            let r0 = build_synthetic_data(data_len);
-            let r1 = build_synthetic_data(data_len);
-            let r2 = build_synthetic_data(data_len);
-            let r3 = build_synthetic_data(data_len);
+            let r0 = build_synthetic_data(data_len, 0);
+            let r1 = build_synthetic_data(data_len, 0);
+            let r2 = build_synthetic_data(data_len, 0);
+            let r3 = build_synthetic_data(data_len, 0);
             let asset_inputs: [[*const f64; INPUTS]; NUM_ASSETS] =
                 [[r0.as_ptr()], [r1.as_ptr()], [r2.as_ptr()], [r3.as_ptr()]];
             let inputs_ptr: [*const *const f64; NUM_ASSETS] = [
@@ -427,7 +427,7 @@ mod tests {
         let data_len = 60;
 
         unsafe {
-            let real = build_synthetic_data(data_len);
+            let real = build_synthetic_data(data_len, 0);
             let inputs: [*const f64; INPUTS] = [real.as_ptr()];
             let o0: [f64; OPTIONS] = [12.0];
             let o1: [f64; OPTIONS] = [14.0];

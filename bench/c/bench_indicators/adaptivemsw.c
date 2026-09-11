@@ -9,7 +9,7 @@ typedef struct {
 
 static void bench_adaptivemsw(void *ctx_) {
     AdaptiveMSWCtx *ctx = ctx_;
-    const double *inputs[1] = {ctx->stock->close};
+    const double *inputs[ADAPTIVEMSW_INPUTS] = {ctx->stock->close};
     bool optionals[1] = {true}; // dc_period
     struct CIndicatorResult r = adaptivemsw_indicator(inputs, ctx->stock->len, NULL, optionals, 1);
     if (r.error != C_INDICATOR_ERROR_OK) {

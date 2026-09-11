@@ -500,7 +500,8 @@ pub(crate) unsafe fn read_simd_options<'a, const N: usize, const OPTIONS: usize>
 
 #[cfg(test)]
 pub(crate) mod test {
-    pub(crate) fn build_synthetic_data(len: usize) -> Vec<f64> {
-        (0..len).map(|i| (i as f64 + 1.0) * 100.0).collect()
+    pub(crate) fn build_synthetic_data(len: usize, seed: usize) -> Vec<f64> {
+        let scale = 1.0 + 0.5 * seed as f64;
+        (0..len).map(|i| (i as f64 + 1.0) * 100.0 * scale).collect()
     }
 }

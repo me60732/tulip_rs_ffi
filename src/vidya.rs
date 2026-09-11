@@ -337,7 +337,7 @@ mod tests {
         unsafe {
             let options: [f64; OPTIONS] = [5.0, 20.0, 0.5];
             let len = min_data(&options);
-            let real = build_synthetic_data(len);
+            let real = build_synthetic_data(len, 0);
 
             let inputs: [*const f64; INPUTS] = [real.as_ptr()];
 
@@ -357,7 +357,7 @@ mod tests {
         unsafe {
             let options: [f64; OPTIONS] = [5.0, 20.0, 0.5];
             let len1 = min_data(&options);
-            let real1 = build_synthetic_data(len1);
+            let real1 = build_synthetic_data(len1, 0);
 
             let inputs1: [*const f64; INPUTS] = [real1.as_ptr()];
 
@@ -373,7 +373,7 @@ mod tests {
             let state = result.state;
 
             let len2 = 30;
-            let real2 = build_synthetic_data(len2);
+            let real2 = build_synthetic_data(len2, 0);
 
             let inputs2: [*const f64; INPUTS] = [real2.as_ptr()];
 
@@ -392,8 +392,8 @@ mod tests {
             let options: [f64; OPTIONS] = [5.0, 20.0, 0.5];
             let len = min_data(&options);
 
-            let real1 = build_synthetic_data(len);
-            let real2 = build_synthetic_data(len);
+            let real1 = build_synthetic_data(len, 0);
+            let real2 = build_synthetic_data(len, 0);
 
             let inputs_array: [*const f64; INPUTS] = [real1.as_ptr()];
             let inputs_array2: [*const f64; INPUTS] = [real2.as_ptr()];
@@ -428,7 +428,7 @@ mod tests {
             // Must satisfy min_data for *all* option sets used below.
             let len = min_data(&[5.0, 20.0, 0.5]).max(min_data(&[10.0, 30.0, 0.3]));
 
-            let real = build_synthetic_data(len);
+            let real = build_synthetic_data(len, 0);
 
             let inputs: [*const f64; INPUTS] = [real.as_ptr()];
 

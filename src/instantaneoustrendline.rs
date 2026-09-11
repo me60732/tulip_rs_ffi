@@ -289,7 +289,7 @@ mod tests {
     fn test_instantaneoustrendline_indicator() {
         unsafe {
             let len = min_data(&[0.0; OPTIONS]);
-            let real = build_synthetic_data(len);
+            let real = build_synthetic_data(len, 0);
 
             let inputs: [*const f64; INPUTS] = [real.as_ptr()];
 
@@ -313,7 +313,7 @@ mod tests {
     fn test_instantaneoustrendline_batch() {
         unsafe {
             let len1 = min_data(&[0.0; OPTIONS]);
-            let real1 = build_synthetic_data(len1);
+            let real1 = build_synthetic_data(len1, 0);
 
             let inputs1: [*const f64; INPUTS] = [real1.as_ptr()];
 
@@ -330,7 +330,7 @@ mod tests {
             let state = result.state;
 
             let len2 = 30;
-            let real2 = build_synthetic_data(len2);
+            let real2 = build_synthetic_data(len2, 0);
 
             let inputs2: [*const f64; INPUTS] = [real2.as_ptr()];
 
@@ -350,8 +350,8 @@ mod tests {
         unsafe {
             let len = min_data(&[0.0; OPTIONS]);
 
-            let real1 = build_synthetic_data(len);
-            let real2 = build_synthetic_data(len);
+            let real1 = build_synthetic_data(len, 0);
+            let real2 = build_synthetic_data(len, 0);
 
             let inputs_array: [*const f64; INPUTS] = [real1.as_ptr()];
             let inputs_array2: [*const f64; INPUTS] = [real2.as_ptr()];
