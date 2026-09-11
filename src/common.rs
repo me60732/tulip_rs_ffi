@@ -12,10 +12,164 @@
 //!     concrete Rust type) releases the boxed state returned by
 //!     `*_indicator()` whenever the caller is done streaming.
 
-use std::os::raw::c_void;
+use std::ffi::CString;
+use std::os::raw::{c_char, c_void};
 use std::ptr;
 use std::slice;
-use tulip_rs::types::IndicatorError;
+use tulip_rs::types::{DisplayGroup, DisplayType, IndicatorError, IndicatorType, Info};
+
+/// A C-ABI array of null-terminated strings: `len` pointers, each pointing to
+/// a `\0`-terminated `c_char` buffer. Backing memory is intentionally leaked
+/// (see `pack_info`) since it mirrors a `&'static` Rust string table that
+/// lives for the process's lifetime -- callers must not free it.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct CStringArray {
+    pub ptr: *const *const c_char,
+    pub len: usize,
+}
+
+// SAFETY: every `CStringArray` produced by this crate points at leaked,
+// read-only, process-lifetime string tables that are never mutated after
+// creation, so sharing/transferring references across threads is sound.
+unsafe impl Sync for CStringArray {}
+unsafe impl Send for CStringArray {}
+
+/// C-ABI mirror of `tulip_rs::types::IndicatorType`.
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum CIndicatorType {
+    Trend = 0,
+    Momentum = 1,
+    Volume = 2,
+    Volatility = 3,
+    Price = 4,
+    Cycle = 5,
+    CandleStick = 6,
+    Math = 7,
+    Other = 8,
+}
+
+impl From<IndicatorType> for CIndicatorType {
+    fn from(t: IndicatorType) -> Self {
+        match t {
+            IndicatorType::Trend => CIndicatorType::Trend,
+            IndicatorType::Momentum => CIndicatorType::Momentum,
+            IndicatorType::Volume => CIndicatorType::Volume,
+            IndicatorType::Volatility => CIndicatorType::Volatility,
+            IndicatorType::Price => CIndicatorType::Price,
+            IndicatorType::Cycle => CIndicatorType::Cycle,
+            IndicatorType::CandleStick => CIndicatorType::CandleStick,
+            IndicatorType::Math => CIndicatorType::Math,
+            IndicatorType::Other => CIndicatorType::Other,
+        }
+    }
+}
+
+/// C-ABI mirror of `tulip_rs::types::DisplayType`.
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum CDisplayType {
+    Overlay = 0,
+    Indicator = 1,
+    Volume = 2,
+    Price = 3,
+}
+
+impl From<DisplayType> for CDisplayType {
+    fn from(t: DisplayType) -> Self {
+        match t {
+            DisplayType::Overlay => CDisplayType::Overlay,
+            DisplayType::Indicator => CDisplayType::Indicator,
+            DisplayType::Volume => CDisplayType::Volume,
+            DisplayType::Price => CDisplayType::Price,
+        }
+    }
+}
+
+/// C-ABI mirror of `tulip_rs::types::DisplayGroup`. Backing memory
+/// (including `outputs`) is intentionally leaked (mirrors `&'static` Rust
+/// data) -- read it, do not free it. `offset` is null when the source
+/// `Option<&'static str>` is `None`.
+#[repr(C)]
+pub struct CDisplayGroup {
+    pub id: *const c_char,
+    pub label: *const c_char,
+    pub display_type: CDisplayType,
+    pub offset: *const c_char,
+    pub outputs: CStringArray,
+}
+
+/// A C-ABI array of `CDisplayGroup`s. Backing memory is intentionally
+/// leaked (mirrors a `&'static` Rust slice) -- do not free it.
+#[repr(C)]
+pub struct CDisplayGroupArray {
+    pub ptr: *const CDisplayGroup,
+    pub len: usize,
+}
+
+fn pack_display_group(g: &DisplayGroup) -> CDisplayGroup {
+    CDisplayGroup {
+        id: leak_c_str(g.id),
+        label: leak_c_str(g.label),
+        display_type: g.display_type.into(),
+        offset: g.offset.map(leak_c_str).unwrap_or(ptr::null()),
+        outputs: leak_str_array(g.outputs),
+    }
+}
+
+fn leak_display_group_array(groups: &[DisplayGroup]) -> CDisplayGroupArray {
+    let packed: Vec<CDisplayGroup> = groups.iter().map(pack_display_group).collect();
+    let len = packed.len();
+    let ptr = Box::into_raw(packed.into_boxed_slice()) as *const CDisplayGroup;
+    CDisplayGroupArray { ptr, len }
+}
+
+/// C-ABI mirror of `tulip_rs::types::Info`: static metadata describing an
+/// indicator's name, type, inputs, options, (mandatory/optional) outputs,
+/// and display groups. Returned by every `<name>_info()` function. Backing
+/// memory is intentionally leaked (mirrors a `&'static` Rust string table)
+/// -- do not free any field of this struct.
+#[repr(C)]
+pub struct CIndicatorInfo {
+    pub name: *const c_char,
+    pub full_name: *const c_char,
+    pub indicator_type: CIndicatorType,
+    pub inputs: CStringArray,
+    pub options: CStringArray,
+    pub outputs: CStringArray,
+    pub optional_outputs: CStringArray,
+    pub display_groups: CDisplayGroupArray,
+}
+
+fn leak_c_str(s: &str) -> *const c_char {
+    CString::new(s)
+        .expect("indicator Info strings must not contain interior NUL bytes")
+        .into_raw() as *const c_char
+}
+
+fn leak_str_array(strs: &[&str]) -> CStringArray {
+    let ptrs: Vec<*const c_char> = strs.iter().map(|s| leak_c_str(s)).collect();
+    let len = ptrs.len();
+    let ptr = Box::into_raw(ptrs.into_boxed_slice()) as *const *const c_char;
+    CStringArray { ptr, len }
+}
+
+/// Converts a `tulip_rs::types::Info` (e.g. `Adosc::INFO`) into a leaked,
+/// C-ABI-friendly `CIndicatorInfo`. Called once per `<name>_info()` -- the
+/// returned strings are meant to be read, not freed.
+pub(crate) fn pack_info(info: &Info) -> CIndicatorInfo {
+    CIndicatorInfo {
+        name: leak_c_str(info.name),
+        full_name: leak_c_str(info.full_name),
+        indicator_type: info.indicator_type.into(),
+        inputs: leak_str_array(info.inputs),
+        options: leak_str_array(info.options),
+        outputs: leak_str_array(info.outputs),
+        optional_outputs: leak_str_array(info.optional_outputs),
+        display_groups: leak_display_group_array(info.display_groups),
+    }
+}
 
 /// C-ABI mirror of `tulip_rs::types::IndicatorError`.
 #[repr(C)]
@@ -86,21 +240,39 @@ impl CBatchResult {
 
 /// Leaks `rows` into raw (outputs, output_lens, num_outputs) triples for a
 /// C-ABI result struct. Must be paired with `free_outputs`.
-pub(crate) fn pack_outputs(rows: Vec<Vec<f64>>) -> (*mut *mut f64, *mut usize, usize) {
-    let num_outputs = rows.len();
-    let mut ptrs: Vec<*mut f64> = Vec::with_capacity(num_outputs);
-    let mut lens: Vec<usize> = Vec::with_capacity(num_outputs);
+pub(crate) fn pack_outputs(
+    rows: Vec<Vec<f64>>,
+    optional: Option<&[bool]>,
+) -> (*mut *mut f64, *mut usize, usize) {
+    // When no optional outputs are requested (optional = None), filter out empty rows
+    // which represent non-requested optional outputs. The core library allocates buffers
+    // for all outputs but only writes to those that were enabled.
+    let mut ptrs: Vec<*mut f64> = Vec::new();
+    let mut lens: Vec<usize> = Vec::new();
 
-    for row in rows {
-        let len = row.len();
-        let boxed = row.into_boxed_slice();
-        // Thin pointer to the first element; length is tracked separately
-        // in `lens` since the C side has no concept of a Rust fat pointer.
-        let ptr = Box::into_raw(boxed) as *mut f64;
-        ptrs.push(ptr);
-        lens.push(len);
+    if optional.is_none() {
+        // No optional outputs requested - return only non-empty rows (mandatory outputs)
+        for row in rows {
+            let len = row.len();
+            if len > 0 {
+                let boxed = row.into_boxed_slice();
+                let ptr = Box::into_raw(boxed) as *mut f64;
+                ptrs.push(ptr);
+                lens.push(len);
+            }
+        }
+    } else {
+        // Optional outputs requested - return all rows
+        for row in rows {
+            let len = row.len();
+            let boxed = row.into_boxed_slice();
+            let ptr = Box::into_raw(boxed) as *mut f64;
+            ptrs.push(ptr);
+            lens.push(len);
+        }
     }
 
+    let num_outputs = lens.len();
     let outputs = Box::into_raw(ptrs.into_boxed_slice()) as *mut *mut f64;
     let output_lens = Box::into_raw(lens.into_boxed_slice()) as *mut usize;
     (outputs, output_lens, num_outputs)
@@ -212,6 +384,7 @@ impl CSimdResult {
 /// results' pointers are boxed into two more leaked arrays.
 pub(crate) fn pack_simd_outputs(
     results: Vec<Vec<Vec<f64>>>,
+    optional: Option<&[bool]>,
 ) -> (*mut *mut *mut f64, *mut *mut usize, usize, usize) {
     let num_results = results.len();
     let mut outputs_ptrs: Vec<*mut *mut f64> = Vec::with_capacity(num_results);
@@ -219,7 +392,7 @@ pub(crate) fn pack_simd_outputs(
     let mut num_outputs = 0;
 
     for result_rows in results {
-        let (outs, lens, n_out) = pack_outputs(result_rows);
+        let (outs, lens, n_out) = pack_outputs(result_rows, optional);
         outputs_ptrs.push(outs);
         output_lens_ptrs.push(lens);
         num_outputs = n_out; // all results have same num_outputs
@@ -323,4 +496,11 @@ pub(crate) unsafe fn read_simd_options<'a, const N: usize, const OPTIONS: usize>
 ) -> [&'a [f64; OPTIONS]; N] {
     let ptrs = slice::from_raw_parts(options, N);
     std::array::from_fn(|i| &*(ptrs[i] as *const [f64; OPTIONS]))
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    pub(crate) fn build_synthetic_data(len: usize) -> Vec<f64> {
+        (0..len).map(|i| (i as f64 + 1.0) * 100.0).collect()
+    }
 }

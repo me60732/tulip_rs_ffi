@@ -19,13 +19,32 @@ use tulip_rs::indicators::avgprice::{AvgPrice, IndicatorState as AvgPriceState, 
 use tulip_rs::types::IndicatorError;
 
 use crate::common::{
-    optional_outputs_slice, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
-    read_simd_assets_inputs, CBatchResult, CIndicatorError, CIndicatorResult, CSimdResult,
+    optional_outputs_slice, pack_info, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
+    read_simd_assets_inputs, CBatchResult, CIndicatorError, CIndicatorInfo, CIndicatorResult,
+    CSimdResult,
 };
 
 /// Opaque state handle returned by `avgprice_indicator()` and consumed by
 /// `avgprice_batch()` / `avgprice_state_free()`.
 pub type AvgPriceStateHandle = AvgPriceState;
+
+/// Returns static metadata about the `avgprice` indicator: its name, input
+/// names, option names, and (mandatory/optional) output names, mirroring
+/// `AvgPrice::INFO`.
+///
+/// The returned strings are leaked, process-lifetime C strings -- read them,
+/// don't free them.
+#[no_mangle]
+pub extern "C" fn avgprice_info() -> CIndicatorInfo {
+    pack_info(&AvgPrice::INFO)
+}
+
+/// Returns the minimum number of bars `avgprice` needs to produce any output at
+/// all, given `options`.
+#[no_mangle]
+pub extern "C" fn avgprice_min_data(_options: *const f64) -> usize {
+    AvgPrice::min_data(&[])
+}
 
 /// Runs `avgprice` over `data_len` bars.
 ///
@@ -39,7 +58,7 @@ pub type AvgPriceStateHandle = AvgPriceState;
 /// # Safety
 /// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
 ///   `data_len` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s (pass null + 0 to request no optional outputs).
 #[no_mangle]
 pub unsafe extern "C" fn avgprice_indicator(
@@ -47,16 +66,16 @@ pub unsafe extern "C" fn avgprice_indicator(
     data_len: usize,
     _options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CIndicatorResult {
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
     // AVGPRICE has no options (OPTIONS=0), so we create an empty array
     let _options: [f64; OPTIONS] = [];
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match AvgPrice::indicator(&inputs, &_options, optional) {
         Ok((rows, state)) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             let state = Box::into_raw(Box::new(state)) as *mut c_void;
             CIndicatorResult {
                 error: CIndicatorError::Ok,
@@ -82,7 +101,7 @@ pub unsafe extern "C" fn avgprice_indicator(
 ///   `avgprice_indicator()`.
 /// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
 ///   `data_len` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s.
 #[no_mangle]
 pub unsafe extern "C" fn avgprice_batch(
@@ -90,7 +109,7 @@ pub unsafe extern "C" fn avgprice_batch(
     inputs: *const *const f64,
     data_len: usize,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CBatchResult {
     if state.is_null() {
         return CBatchResult::err(IndicatorError::InvalidIndicatorState);
@@ -100,11 +119,11 @@ pub unsafe extern "C" fn avgprice_batch(
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
     // AVGPRICE has no options (OPTIONS=0), so we create an empty array
     let _options: [f64; OPTIONS] = [];
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match state.batch_indicator(&inputs, optional) {
         Ok(rows) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             CBatchResult {
                 error: CIndicatorError::Ok,
                 outputs,
@@ -148,7 +167,7 @@ pub unsafe extern "C" fn avgprice_state_free(state: *mut c_void) {
 /// - `inputs` must point to `num_assets` valid pointers, each pointing to
 ///   `INPUTS` valid non-null `*const f64`s, each pointing to `data_len` valid
 ///   `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s.
 #[no_mangle]
 pub unsafe extern "C" fn avgprice_simd_by_assets(
@@ -157,13 +176,13 @@ pub unsafe extern "C" fn avgprice_simd_by_assets(
     data_len: usize,
     _options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     match num_assets {
-        2 => avgprice_simd_by_assets_n::<2>(inputs, data_len, optional_outputs, num_optional),
-        4 => avgprice_simd_by_assets_n::<4>(inputs, data_len, optional_outputs, num_optional),
-        8 => avgprice_simd_by_assets_n::<8>(inputs, data_len, optional_outputs, num_optional),
-        16 => avgprice_simd_by_assets_n::<16>(inputs, data_len, optional_outputs, num_optional),
+        2 => avgprice_simd_by_assets_n::<2>(inputs, data_len, optional_outputs, numoptional),
+        4 => avgprice_simd_by_assets_n::<4>(inputs, data_len, optional_outputs, numoptional),
+        8 => avgprice_simd_by_assets_n::<8>(inputs, data_len, optional_outputs, numoptional),
+        16 => avgprice_simd_by_assets_n::<16>(inputs, data_len, optional_outputs, numoptional),
         _ => CSimdResult::err(IndicatorError::InvalidInputs),
     }
 }
@@ -172,7 +191,7 @@ unsafe fn avgprice_simd_by_assets_n<const N: usize>(
     inputs: *const *const *const f64,
     data_len: usize,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     // `owned` holds the per-asset input slices; `refs` borrows from it, so
     // both must live in this stack frame for the duration of the call.
@@ -180,11 +199,11 @@ unsafe fn avgprice_simd_by_assets_n<const N: usize>(
     let refs: [&[&[f64]; INPUTS]; N] = std::array::from_fn(|i| &owned[i]);
     // AVGPRICE has no options (OPTIONS=0), so we create an empty array
     let _options: [f64; OPTIONS] = [];
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match AvgPrice::indicator_by_assets::<N>(&refs, &_options, optional) {
         Ok((results, states)) => {
-            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results);
+            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results, optional);
             let states = pack_states(states);
             CSimdResult {
                 error: CIndicatorError::Ok,
@@ -205,6 +224,21 @@ mod tests {
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
     };
+
+    #[test]
+    fn test_avgprice_info() {
+        let info = avgprice_info();
+        assert!(info.inputs.len > 0);
+        assert_eq!(info.options.len, 0);
+        assert!(info.outputs.len > 0);
+        assert_eq!(info.optional_outputs.len, 0);
+    }
+
+    #[test]
+    fn test_avgprice_min_data() {
+        let min = avgprice_min_data(std::ptr::null());
+        assert!(min > 0);
+    }
 
     #[test]
     fn test_avgprice_indicator() {

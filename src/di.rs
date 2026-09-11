@@ -23,14 +23,36 @@ use tulip_rs::indicators::di::{Di, IndicatorState as DiState, INPUTS, OPTIONS};
 use tulip_rs::types::IndicatorError;
 
 use crate::common::{
-    optional_outputs_slice, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
-    read_simd_assets_inputs, read_simd_options, CBatchResult, CIndicatorError, CIndicatorResult,
-    CSimdResult,
+    optional_outputs_slice, pack_info, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
+    read_simd_assets_inputs, read_simd_options, CBatchResult, CIndicatorError, CIndicatorInfo,
+    CIndicatorResult, CSimdResult,
 };
 
 /// Opaque state handle returned by `di_indicator()` and consumed by
-/// `di_batch()` / `di_state_free()`.
+/// `di_batch()` / `di_state_free().
 pub type DiStateHandle = DiState;
+
+/// Returns static metadata about the `di` indicator: its name, input
+/// names, option names, and (mandatory/optional) output names, mirroring
+/// `Di::INFO`.
+///
+/// The returned strings are leaked, process-lifetime C strings -- read them,
+/// don't free them.
+#[no_mangle]
+pub extern "C" fn di_info() -> CIndicatorInfo {
+    pack_info(&Di::INFO)
+}
+
+/// Returns the minimum number of bars `di` needs to produce any output at
+/// all, given `options`.
+///
+/// # Safety
+/// `options` must point to `OPTIONS` (1) valid `f64`s.
+#[no_mangle]
+pub unsafe extern "C" fn di_min_data(options: *const f64) -> usize {
+    let options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
+    Di::min_data(&options)
+}
 
 /// Runs `di` over `data_len` bars.
 ///
@@ -46,7 +68,7 @@ pub type DiStateHandle = DiState;
 /// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
 ///   `data_len` valid `f64`s.
 /// - `options` must point to `OPTIONS` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s (pass null + 0 to request no optional outputs).
 #[no_mangle]
 pub unsafe extern "C" fn di_indicator(
@@ -54,15 +76,15 @@ pub unsafe extern "C" fn di_indicator(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CIndicatorResult {
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
     let options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Di::indicator(&inputs, &options, optional) {
         Ok((rows, state)) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             let state = Box::into_raw(Box::new(state)) as *mut c_void;
             CIndicatorResult {
                 error: CIndicatorError::Ok,
@@ -88,7 +110,7 @@ pub unsafe extern "C" fn di_indicator(
 ///   `di_indicator()`.
 /// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
 ///   `data_len` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s.
 #[no_mangle]
 pub unsafe extern "C" fn di_batch(
@@ -96,7 +118,7 @@ pub unsafe extern "C" fn di_batch(
     inputs: *const *const f64,
     data_len: usize,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CBatchResult {
     if state.is_null() {
         return CBatchResult::err(IndicatorError::InvalidIndicatorState);
@@ -104,11 +126,11 @@ pub unsafe extern "C" fn di_batch(
     let state = &mut *(state as *mut DiStateHandle);
 
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match state.batch_indicator(&inputs, optional) {
         Ok(rows) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             CBatchResult {
                 error: CIndicatorError::Ok,
                 outputs,
@@ -153,7 +175,7 @@ pub unsafe extern "C" fn di_state_free(state: *mut c_void) {
 ///   `INPUTS` valid non-null `*const f64`s, each pointing to `data_len` valid
 ///   `f64`s.
 /// - `options` must point to `OPTIONS` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s.
 #[no_mangle]
 pub unsafe extern "C" fn di_simd_by_assets(
@@ -162,13 +184,13 @@ pub unsafe extern "C" fn di_simd_by_assets(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     match num_assets {
-        2 => di_simd_by_assets_n::<2>(inputs, data_len, options, optional_outputs, num_optional),
-        4 => di_simd_by_assets_n::<4>(inputs, data_len, options, optional_outputs, num_optional),
-        8 => di_simd_by_assets_n::<8>(inputs, data_len, options, optional_outputs, num_optional),
-        16 => di_simd_by_assets_n::<16>(inputs, data_len, options, optional_outputs, num_optional),
+        2 => di_simd_by_assets_n::<2>(inputs, data_len, options, optional_outputs, numoptional),
+        4 => di_simd_by_assets_n::<4>(inputs, data_len, options, optional_outputs, numoptional),
+        8 => di_simd_by_assets_n::<8>(inputs, data_len, options, optional_outputs, numoptional),
+        16 => di_simd_by_assets_n::<16>(inputs, data_len, options, optional_outputs, numoptional),
         _ => CSimdResult::err(IndicatorError::InvalidInputs),
     }
 }
@@ -178,18 +200,19 @@ unsafe fn di_simd_by_assets_n<const N: usize>(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     // `owned` holds the per-asset input slices; `refs` borrows from it, so
     // both must live in this stack frame for the duration of the call.
     let owned = read_simd_assets_inputs::<N, INPUTS>(inputs, data_len);
     let refs: [&[&[f64]; INPUTS]; N] = std::array::from_fn(|i| &owned[i]);
     let options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Di::indicator_by_assets::<N>(&refs, &options, optional) {
         Ok((results, states)) => {
-            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results);
+            let (outputs, output_lens, num_outputs, num_results) =
+                pack_simd_outputs(results, optional);
             let states = pack_states(states);
             CSimdResult {
                 error: CIndicatorError::Ok,
@@ -224,7 +247,7 @@ unsafe fn di_simd_by_assets_n<const N: usize>(
 ///   pointing to `data_len` valid `f64`s.
 /// - `options` must point to `num_option_sets` valid pointers, each
 ///   pointing to `OPTIONS` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s.
 #[no_mangle]
 pub unsafe extern "C" fn di_simd_by_options(
@@ -233,13 +256,13 @@ pub unsafe extern "C" fn di_simd_by_options(
     options: *const *const f64,
     num_option_sets: usize,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     match num_option_sets {
-        2 => di_simd_by_options_n::<2>(inputs, data_len, options, optional_outputs, num_optional),
-        4 => di_simd_by_options_n::<4>(inputs, data_len, options, optional_outputs, num_optional),
-        8 => di_simd_by_options_n::<8>(inputs, data_len, options, optional_outputs, num_optional),
-        16 => di_simd_by_options_n::<16>(inputs, data_len, options, optional_outputs, num_optional),
+        2 => di_simd_by_options_n::<2>(inputs, data_len, options, optional_outputs, numoptional),
+        4 => di_simd_by_options_n::<4>(inputs, data_len, options, optional_outputs, numoptional),
+        8 => di_simd_by_options_n::<8>(inputs, data_len, options, optional_outputs, numoptional),
+        16 => di_simd_by_options_n::<16>(inputs, data_len, options, optional_outputs, numoptional),
         _ => CSimdResult::err(IndicatorError::InvalidInputs),
     }
 }
@@ -249,15 +272,16 @@ unsafe fn di_simd_by_options_n<const N: usize>(
     data_len: usize,
     options: *const *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
     let options = read_simd_options::<N, OPTIONS>(options);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Di::indicator_by_options::<N>(&inputs, &options, optional) {
         Ok((results, states)) => {
-            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results);
+            let (outputs, output_lens, num_outputs, num_results) =
+                pack_simd_outputs(results, optional);
             let states = pack_states(states);
             CSimdResult {
                 error: CIndicatorError::Ok,
@@ -280,6 +304,24 @@ mod tests {
     };
 
     #[test]
+    fn test_di_info() {
+        let info = di_info();
+        assert!(info.inputs.len > 0);
+        assert_eq!(info.options.len, 1);
+        assert!(info.outputs.len > 0);
+        assert_eq!(info.optional_outputs.len, 2);
+    }
+
+    #[test]
+    fn test_di_min_data() {
+        unsafe {
+            let options: [f64; OPTIONS] = [14.0];
+            let min = di_min_data(options.as_ptr());
+            assert!(min > 0);
+        }
+    }
+
+    #[test]
     fn test_di_indicator() {
         unsafe {
             // Create test data: high, low, close prices
@@ -298,8 +340,8 @@ mod tests {
             let result = di_indicator(inputs_ptr, high.len(), options_ptr, std::ptr::null(), 0);
 
             assert_eq!(result.error, CIndicatorError::Ok);
-            // di has 2 mandatory + 2 optional outputs = 4 total
-            assert_eq!(result.num_outputs, 4);
+            // Without optional outputs: only mandatory rows returned (di_plus, di_minus)
+            assert_eq!(result.num_outputs, 2);
 
             // Free results
             tulip_ffi_result_free(result);
@@ -336,8 +378,8 @@ mod tests {
             let batch_result = di_batch(state, inputs_ptr2, high2.len(), std::ptr::null(), 0);
 
             assert_eq!(batch_result.error, CIndicatorError::Ok);
-            // di has 2 mandatory + 2 optional outputs = 4 total
-            assert_eq!(batch_result.num_outputs, 4);
+            // Without optional outputs: only mandatory rows returned (di_plus, di_minus)
+            assert_eq!(batch_result.num_outputs, 2);
 
             // Free results
             tulip_ffi_batch_result_free(batch_result);
@@ -375,8 +417,8 @@ mod tests {
 
             assert_eq!(result.error, CIndicatorError::Ok);
             assert_eq!(result.num_results, 2);
-            // di has 2 mandatory + 2 optional outputs = 4 total
-            assert_eq!(result.num_outputs, 4);
+            // Without optional outputs: only mandatory rows returned (di_plus, di_minus)
+            assert_eq!(result.num_outputs, 2);
 
             // Free results
             tulip_ffi_simd_result_free(result);
@@ -408,8 +450,8 @@ mod tests {
 
             assert_eq!(result.error, CIndicatorError::Ok);
             assert_eq!(result.num_results, 2);
-            // di has 2 mandatory + 2 optional outputs = 4 total
-            assert_eq!(result.num_outputs, 4);
+            // Without optional outputs: only mandatory rows returned (di_plus, di_minus)
+            assert_eq!(result.num_outputs, 2);
 
             // Free results
             tulip_ffi_simd_result_free(result);

@@ -23,13 +23,32 @@ use tulip_rs::indicators::bop::{Bop, IndicatorState as BopState, INPUTS, OPTIONS
 use tulip_rs::types::IndicatorError;
 
 use crate::common::{
-    optional_outputs_slice, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
-    read_simd_assets_inputs, CBatchResult, CIndicatorError, CIndicatorResult, CSimdResult,
+    optional_outputs_slice, pack_info, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
+    read_simd_assets_inputs, CBatchResult, CIndicatorError, CIndicatorInfo, CIndicatorResult,
+    CSimdResult,
 };
 
 /// Opaque state handle returned by `bop_indicator()` and consumed by
 /// `bop_batch()` / `bop_state_free()`.
 pub type BopStateHandle = BopState;
+
+/// Returns static metadata about the `bop` indicator: its name, input
+/// names, option names, and (mandatory/optional) output names, mirroring
+/// `Bop::INFO`.
+///
+/// The returned strings are leaked, process-lifetime C strings -- read them,
+/// don't free them.
+#[no_mangle]
+pub extern "C" fn bop_info() -> CIndicatorInfo {
+    pack_info(&Bop::INFO)
+}
+
+/// Returns the minimum number of bars `bop` needs to produce any output at
+/// all, given `options`.
+#[no_mangle]
+pub extern "C" fn bop_min_data(_options: *const f64) -> usize {
+    Bop::min_data(&[])
+}
 
 /// Runs `bop` over `data_len` bars.
 ///
@@ -43,7 +62,7 @@ pub type BopStateHandle = BopState;
 /// # Safety
 /// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
 ///   `data_len` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s (pass null + 0 to request no optional outputs).
 #[no_mangle]
 pub unsafe extern "C" fn bop_indicator(
@@ -51,16 +70,16 @@ pub unsafe extern "C" fn bop_indicator(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CIndicatorResult {
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
     // OPTIONS=0 - dereference with underscore prefix to avoid unused variable warning
     let _options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Bop::indicator(&inputs, &_options, optional) {
         Ok((rows, state)) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             let state = Box::into_raw(Box::new(state)) as *mut c_void;
             CIndicatorResult {
                 error: CIndicatorError::Ok,
@@ -86,7 +105,7 @@ pub unsafe extern "C" fn bop_indicator(
 ///   `bop_indicator()`.
 /// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
 ///   `data_len` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s.
 #[no_mangle]
 pub unsafe extern "C" fn bop_batch(
@@ -94,7 +113,7 @@ pub unsafe extern "C" fn bop_batch(
     inputs: *const *const f64,
     data_len: usize,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CBatchResult {
     if state.is_null() {
         return CBatchResult::err(IndicatorError::InvalidIndicatorState);
@@ -102,11 +121,11 @@ pub unsafe extern "C" fn bop_batch(
     let state = &mut *(state as *mut BopStateHandle);
 
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match state.batch_indicator(&inputs, optional) {
         Ok(rows) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             CBatchResult {
                 error: CIndicatorError::Ok,
                 outputs,
@@ -157,13 +176,13 @@ pub unsafe extern "C" fn bop_simd_by_assets(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     match num_assets {
-        2 => bop_simd_by_assets_n::<2>(inputs, data_len, options, optional_outputs, num_optional),
-        4 => bop_simd_by_assets_n::<4>(inputs, data_len, options, optional_outputs, num_optional),
-        8 => bop_simd_by_assets_n::<8>(inputs, data_len, options, optional_outputs, num_optional),
-        16 => bop_simd_by_assets_n::<16>(inputs, data_len, options, optional_outputs, num_optional),
+        2 => bop_simd_by_assets_n::<2>(inputs, data_len, options, optional_outputs, numoptional),
+        4 => bop_simd_by_assets_n::<4>(inputs, data_len, options, optional_outputs, numoptional),
+        8 => bop_simd_by_assets_n::<8>(inputs, data_len, options, optional_outputs, numoptional),
+        16 => bop_simd_by_assets_n::<16>(inputs, data_len, options, optional_outputs, numoptional),
         _ => CSimdResult::err(IndicatorError::InvalidInputs),
     }
 }
@@ -173,7 +192,7 @@ unsafe fn bop_simd_by_assets_n<const N: usize>(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     // `owned` holds the per-asset input slices; `refs` borrows from it, so
     // both must live in this stack frame for the duration of the call.
@@ -181,11 +200,11 @@ unsafe fn bop_simd_by_assets_n<const N: usize>(
     let refs: [&[&[f64]; INPUTS]; N] = std::array::from_fn(|i| &owned[i]);
     // OPTIONS=0
     let _options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Bop::indicator_by_assets::<N>(&refs, &_options, optional) {
         Ok((results, states)) => {
-            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results);
+            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results, optional);
             let states = pack_states(states);
             CSimdResult {
                 error: CIndicatorError::Ok,
@@ -207,6 +226,21 @@ mod tests {
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
     };
+
+    #[test]
+    fn test_bop_info() {
+        let info = bop_info();
+        assert!(info.inputs.len > 0);
+        assert_eq!(info.options.len, 0);
+        assert!(info.outputs.len > 0);
+        assert_eq!(info.optional_outputs.len, 0);
+    }
+
+    #[test]
+    fn test_bop_min_data() {
+        let min = bop_min_data(std::ptr::null());
+        assert!(min > 0);
+    }
 
     #[test]
     fn test_bop_indicator() {

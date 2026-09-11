@@ -1,0 +1,222 @@
+// Candlestick pattern example for tulip_rs_ffi (Three Black Crows).
+// Mirrors tulip_rs/tulip_rs/examples/candle/threebar/ti_cdl3blackcrows_example.py/.rs:
+// same sample data, same options, same two runs (no forecast filter, then
+// BearishReversal filter) -- plus the partial-calculation + batch-continuation
+// verification the other tulip_rs_ffi examples use.
+//
+// Candlestick differs from every other indicator in this crate: its output
+// is not numeric rows but, per bar, zero or more matched pattern ids
+// (CSR-packed). Pattern metadata (name/full_name/japanese_name/forecast/
+// bars -- the dict the docs describe) is looked up by id.
+//
+// Build:
+//   cc -O2 -o candlestick_example examples/candlestick_example.c \
+//       -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
+// Run:
+//   ./candlestick_example
+
+#include <stdint.h>
+#include <stdio.h>
+
+#include "tulip_rs_ffi.h"
+
+// History bars, then three pronounced down candles to complete the
+// Three Black Crows pattern at the tail (same as the Rust/Python example).
+static const double open[] = {
+    81.85, 81.20, 81.55, 82.91, 83.10, 83.41, 82.71, 82.70, 84.20, 84.25,
+    84.03, 85.45, 86.18, 88.00, 87.30, 87.50, 87.00, 86.50,
+};
+static const double high[] = {
+    82.15, 81.89, 83.03, 83.30, 83.85, 83.90, 83.33, 84.30, 84.84, 85.00,
+    85.90, 86.58, 86.98, 88.00, 87.31, 87.55, 87.15, 86.60,
+};
+static const double low[] = {
+    81.29, 80.64, 81.31, 82.65, 83.07, 83.11, 82.49, 82.30, 84.15, 84.11,
+    84.03, 85.39, 85.76, 87.17, 87.20, 86.10, 85.90, 85.20,
+};
+static const double close[] = {
+    81.59, 81.06, 82.87, 83.00, 83.61, 83.15, 82.84, 83.99, 84.55, 84.36,
+    85.53, 86.54, 86.89, 87.77, 87.29, 86.50, 86.00, 85.50,
+};
+
+#define TOTAL 18
+#define PARTIAL 15
+#define REST (TOTAL - PARTIAL)
+
+static const double options[3] = {5.0, 2.0, 3.0}; // candle, trend, trend_signal
+
+// Mirrors the Rust example's `println!("Result: {:?}", result)`: one line
+// per output bar, listing the short names of the patterns detected there.
+static void print_all_bars(const char *what, size_t num_bars, size_t total_patterns,
+                           const uint32_t *bar_offsets, const uint32_t *pattern_ids) {
+    printf("  %s (%zu bars, %zu total patterns):\n", what, num_bars, total_patterns);
+    for (size_t i = 0; i < num_bars; i++) {
+        uint32_t start = bar_offsets[i];
+        uint32_t end = bar_offsets[i + 1];
+        printf("    Bar %2zu: ", i);
+        if (start == end) {
+            printf("None\n");
+        } else {
+            for (uint32_t k = start; k < end; k++) {
+                CCandlePatternInfo info = candlestick_pattern_info(pattern_ids[k]);
+                printf("%s ", info.name);
+            }
+            printf("\n");
+        }
+    }
+}
+
+// Mirrors the Rust example's last-bar report: full name, Japanese name, bars.
+static void print_last_bar(const char *heading, size_t num_bars, const uint32_t *bar_offsets,
+                           const uint32_t *pattern_ids) {
+    if (num_bars == 0) {
+        printf("%s: (no output bars)\n", heading);
+        return;
+    }
+    uint32_t start = bar_offsets[num_bars - 1];
+    uint32_t end = bar_offsets[num_bars];
+    if (start == end) {
+        printf("%s: none\n", heading);
+        return;
+    }
+    printf("%s\n", heading);
+    for (uint32_t k = start; k < end; k++) {
+        CCandlePatternInfo info = candlestick_pattern_info(pattern_ids[k]);
+        printf("  - %s (%s), Bars: %u\n", info.full_name, info.japanese_name, info.bars);
+    }
+}
+
+// Compares the last `n` bars of a full run against a partial+batch run.
+static int csr_tail_matches(size_t full_bars, const uint32_t *full_offsets,
+                            const uint32_t *full_ids, size_t cont_bars,
+                            const uint32_t *cont_offsets, const uint32_t *cont_ids) {
+    if (full_bars < cont_bars) return 0;
+    size_t shift = full_bars - cont_bars;
+    for (size_t i = 0; i < cont_bars; i++) {
+        uint32_t a_start = full_offsets[shift + i], a_end = full_offsets[shift + i + 1];
+        uint32_t b_start = cont_offsets[i], b_end = cont_offsets[i + 1];
+        if (a_end - a_start != b_end - b_start) return 0;
+        for (uint32_t k = 0; k < a_end - a_start; k++) {
+            if (full_ids[a_start + k] != cont_ids[b_start + k]) return 0;
+        }
+    }
+    return 1;
+}
+
+int main(void) {
+    const double *inputs[4] = {open, high, low, close};
+
+    // ---- Step 1: full calculation, no forecast filter (forecast = -1) ----
+    printf("=== Candlestick: full calculation, forecast type None ===\n");
+    CCandleStickResult full = candlestick_indicator(inputs, TOTAL, options, /*forecast=*/-1);
+    if (full.error != C_OK) {
+        fprintf(stderr, "candlestick_indicator failed: error=%d\n", full.error);
+        return 1;
+    }
+    print_all_bars("full result", full.num_bars, full.total_patterns, full.bar_offsets,
+                   full.pattern_ids);
+    print_last_bar("Forecast type None - Patterns found:", full.num_bars, full.bar_offsets,
+                   full.pattern_ids);
+
+    // ---- Step 2: same data, filtered to BearishReversal patterns ----
+    printf("\n=== Candlestick: full calculation, forecast type BearishReversal ===\n");
+    CCandleStickResult filtered = candlestick_indicator(inputs, TOTAL, options, C_FORECAST_BEARISH_REVERSAL);
+    if (filtered.error != C_OK) {
+        fprintf(stderr, "candlestick_indicator (filtered) failed: error=%d\n", filtered.error);
+        return 1;
+    }
+    print_all_bars("filtered result", filtered.num_bars, filtered.total_patterns,
+                   filtered.bar_offsets, filtered.pattern_ids);
+    print_last_bar("Forecast type Specified - Patterns found:", filtered.num_bars,
+                   filtered.bar_offsets, filtered.pattern_ids);
+
+    // ---- Step 3: partial calculation + batch continuation, mirroring the
+    // core example's "State Continuation test": seed with the first PARTIAL
+    // bars (BearishReversal filter), then feed the three pattern bars as one
+    // REST-bar batch through candlestick_batch(). ----
+    printf("\n=== Candlestick: partial (%d bars) + batch continuation (%d bars) ===\n",
+           PARTIAL, REST);
+    CCandleStickResult partial =
+        candlestick_indicator(inputs, PARTIAL, options, C_FORECAST_BEARISH_REVERSAL);
+    if (partial.error != C_OK) {
+        fprintf(stderr, "candlestick_indicator (partial) failed: error=%d\n", partial.error);
+        return 1;
+    }
+    printf("  partial run: %zu bars, %zu patterns\n", partial.num_bars, partial.total_patterns);
+    void *state = partial.state;
+    candlestick_result_free(partial); // frees CSR buffers only; state stays alive
+
+    const double *rest_inputs[4] = {open + PARTIAL, high + PARTIAL, low + PARTIAL,
+                                    close + PARTIAL};
+    CCandleStickBatchResult batch =
+        candlestick_batch(state, rest_inputs, REST, C_FORECAST_BEARISH_REVERSAL);
+    if (batch.error != C_OK) {
+        fprintf(stderr, "candlestick_batch failed: error=%d\n", batch.error);
+        return 1;
+    }
+    print_all_bars("continued run", batch.num_bars, batch.total_patterns, batch.bar_offsets,
+                   batch.pattern_ids);
+    print_last_bar("After batch continuation - Patterns found on last bar:", batch.num_bars,
+                   batch.bar_offsets, batch.pattern_ids);
+
+    printf("\n=== Verification: partial+continued vs. filtered full recompute ===\n");
+    int ok = csr_tail_matches(filtered.num_bars, filtered.bar_offsets, filtered.pattern_ids,
+                              batch.num_bars, batch.bar_offsets, batch.pattern_ids);
+    printf(ok ? "  MATCH: partial+continued patterns equal filtered full recompute tail\n"
+              : "  MISMATCH detected!\n");
+
+    // ---- Step 4: true streaming continuation -- feed the last REST bars
+    // through candlestick_batch() ONE BAR AT A TIME (like live market data),
+    // BearishReversal-filtered, starting from a fresh PARTIAL-bar state.
+    // Every streamed bar must equal the same bar of the filtered full
+    // recompute from Step 2. ----
+    printf("\n=== Candlestick: one-bar-at-a-time streaming (BearishReversal) ===\n");
+    CCandleStickResult seed =
+        candlestick_indicator(inputs, PARTIAL, options, C_FORECAST_BEARISH_REVERSAL);
+    if (seed.error != C_OK) {
+        fprintf(stderr, "candlestick_indicator (stream seed) failed: error=%d\n", seed.error);
+        return 1;
+    }
+    void *stream_state = seed.state;
+    candlestick_result_free(seed);
+
+    int stream_ok = 1;
+    for (size_t i = 0; i < REST; i++) {
+        const double *one[4] = {open + PARTIAL + i, high + PARTIAL + i,
+                                low + PARTIAL + i, close + PARTIAL + i};
+        CCandleStickBatchResult br =
+            candlestick_batch(stream_state, one, 1, C_FORECAST_BEARISH_REVERSAL);
+        if (br.error != C_OK) {
+            fprintf(stderr, "candlestick_batch (bar %zu) failed: error=%d\n", i, br.error);
+            return 1;
+        }
+        uint32_t start = br.bar_offsets[0], end = br.bar_offsets[1];
+        printf("  Stream bar %zu (global %zu):", i, PARTIAL + i);
+        for (uint32_t k = start; k < end; k++) {
+            CCandlePatternInfo info = candlestick_pattern_info(br.pattern_ids[k]);
+            printf(" %s", info.name);
+        }
+        // Compare against the corresponding output bar of the filtered
+        // full recompute (the streamed bars are its last REST bars).
+        size_t fb = filtered.num_bars - REST + i;
+        uint32_t f0 = filtered.bar_offsets[fb], f1 = filtered.bar_offsets[fb + 1];
+        int match = (end - start) == (f1 - f0);
+        for (uint32_t k = 0; match && k < end - start; k++)
+            if (br.pattern_ids[start + k] != filtered.pattern_ids[f0 + k]) match = 0;
+        if (!match) stream_ok = 0;
+        printf("  [%s]\n", match ? "MATCH" : "MISMATCH");
+        candlestick_batch_result_free(br);
+    }
+    printf(stream_ok ? "  ALL MATCH: streamed bars equal filtered full recompute tail\n"
+                     : "  MISMATCH detected!\n");
+
+    candlestick_batch_result_free(batch);
+    candlestick_state_free(full.state);
+    candlestick_state_free(filtered.state);
+    candlestick_result_free(full);
+    candlestick_result_free(filtered);
+    candlestick_state_free(state);
+    candlestick_state_free(stream_state);
+
+    return (ok && stream_ok) ? 0 : 1;
+}

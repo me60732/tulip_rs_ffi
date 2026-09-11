@@ -10,7 +10,7 @@
 //! Parameter order convention (kept consistent across every function in
 //! this crate): each pointer parameter is immediately followed by the
 //! count(s) that describe it, e.g. `inputs, data_len, options, ...,
-//! optional_outputs, num_optional`.
+//! optional_outputs, numoptional`.
 //!
 //! SIMD entry points:
 //! - `ao_simd_by_assets`: compute AO for N assets simultaneously,
@@ -30,13 +30,32 @@ use tulip_rs::indicators::ao::{Ao, IndicatorState as AoState, INPUTS, OPTIONS};
 use tulip_rs::types::IndicatorError;
 
 use crate::common::{
-    optional_outputs_slice, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
-    read_simd_assets_inputs, CBatchResult, CIndicatorError, CIndicatorResult, CSimdResult,
+    optional_outputs_slice, pack_info, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
+    read_simd_assets_inputs, CBatchResult, CIndicatorError, CIndicatorInfo, CIndicatorResult,
+    CSimdResult,
 };
 
 /// Opaque state handle returned by `ao_indicator()` and consumed by
 /// `ao_batch()` / `ao_state_free()`.
 pub type AoStateHandle = AoState;
+
+/// Returns static metadata about the `ao` indicator: its name, input
+/// names, option names, and (mandatory/optional) output names, mirroring
+/// `Ao::INFO`.
+///
+/// The returned strings are leaked, process-lifetime C strings -- read them,
+/// don't free them.
+#[no_mangle]
+pub extern "C" fn ao_info() -> CIndicatorInfo {
+    pack_info(&Ao::INFO)
+}
+
+/// Returns the minimum number of bars `ao` needs to produce any output at
+/// all, given `options`.
+#[no_mangle]
+pub extern "C" fn ao_min_data(_options: *const f64) -> usize {
+    Ao::min_data(&[])
+}
 
 /// Runs `ao` over `data_len` bars.
 ///
@@ -56,15 +75,15 @@ pub unsafe extern "C" fn ao_indicator(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CIndicatorResult {
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
     let _options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Ao::indicator(&inputs, &_options, optional) {
         Ok((rows, state)) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             let state = Box::into_raw(Box::new(state)) as *mut c_void;
             CIndicatorResult {
                 error: CIndicatorError::Ok,
@@ -90,7 +109,7 @@ pub unsafe extern "C" fn ao_indicator(
 ///   `ao_indicator()`.
 /// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
 ///   `data_len` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s (pass null + 0 to request no optional outputs).
 #[no_mangle]
 pub unsafe extern "C" fn ao_batch(
@@ -98,7 +117,7 @@ pub unsafe extern "C" fn ao_batch(
     inputs: *const *const f64,
     data_len: usize,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CBatchResult {
     if state.is_null() {
         return CBatchResult::err(IndicatorError::InvalidIndicatorState);
@@ -106,11 +125,11 @@ pub unsafe extern "C" fn ao_batch(
     let state = &mut *(state as *mut AoStateHandle);
 
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match state.batch_indicator(&inputs, optional) {
         Ok(rows) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             CBatchResult {
                 error: CIndicatorError::Ok,
                 outputs,
@@ -161,13 +180,13 @@ pub unsafe extern "C" fn ao_simd_by_assets(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     match num_assets {
-        2 => ao_simd_by_assets_n::<2>(inputs, data_len, options, optional_outputs, num_optional),
-        4 => ao_simd_by_assets_n::<4>(inputs, data_len, options, optional_outputs, num_optional),
-        8 => ao_simd_by_assets_n::<8>(inputs, data_len, options, optional_outputs, num_optional),
-        16 => ao_simd_by_assets_n::<16>(inputs, data_len, options, optional_outputs, num_optional),
+        2 => ao_simd_by_assets_n::<2>(inputs, data_len, options, optional_outputs, numoptional),
+        4 => ao_simd_by_assets_n::<4>(inputs, data_len, options, optional_outputs, numoptional),
+        8 => ao_simd_by_assets_n::<8>(inputs, data_len, options, optional_outputs, numoptional),
+        16 => ao_simd_by_assets_n::<16>(inputs, data_len, options, optional_outputs, numoptional),
         _ => CSimdResult::err(IndicatorError::InvalidInputs),
     }
 }
@@ -177,18 +196,19 @@ unsafe fn ao_simd_by_assets_n<const N: usize>(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     // `owned` holds the per-asset input slices; `refs` borrows from it, so
     // both must live in this stack frame for the duration of the call.
     let owned = read_simd_assets_inputs::<N, INPUTS>(inputs, data_len);
     let refs: [&[&[f64]; INPUTS]; N] = std::array::from_fn(|i| &owned[i]);
     let _options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Ao::indicator_by_assets::<N>(&refs, &_options, optional) {
         Ok((results, states)) => {
-            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results);
+            let (outputs, output_lens, num_outputs, num_results) =
+                pack_simd_outputs(results, optional);
             let states = pack_states(states);
             CSimdResult {
                 error: CIndicatorError::Ok,
@@ -239,6 +259,21 @@ mod tests {
     }
 
     #[test]
+    fn test_ao_info() {
+        let info = ao_info();
+        assert!(info.inputs.len > 0);
+        assert_eq!(info.options.len, 0);
+        assert!(info.outputs.len > 0);
+        assert_eq!(info.optional_outputs.len, 3);
+    }
+
+    #[test]
+    fn test_ao_min_data() {
+        let min = ao_min_data(std::ptr::null());
+        assert!(min > 0);
+    }
+
+    #[test]
     fn test_ao_indicator() {
         unsafe {
             let data_len = 60;
@@ -254,7 +289,8 @@ mod tests {
             let result = ao_indicator(inputs, data_len, options, optional_outputs.as_ptr(), 3);
 
             assert_eq!(result.error, CIndicatorError::Ok);
-            assert_eq!(result.num_outputs, 4); // ao, short_sma, long_sma, medprice
+            // With all optional outputs requested: all rows returned (ao, short_sma, long_sma, medprice)
+            assert_eq!(result.num_outputs, 4);
 
             let _outputs_slice = slice::from_raw_parts(result.outputs, result.num_outputs);
             let _output_lens_slice = slice::from_raw_parts(result.output_lens, result.num_outputs);
@@ -298,7 +334,8 @@ mod tests {
             let batch_result = ao_batch(state, inputs_extra, extra_data_len, std::ptr::null(), 0);
 
             assert_eq!(batch_result.error, CIndicatorError::Ok);
-            assert_eq!(batch_result.num_outputs, 4); // ao, short_sma, long_sma, medprice
+            // Without optional outputs: only mandatory rows returned (ao)
+            assert_eq!(batch_result.num_outputs, 1);
 
             free_batch_result(batch_result);
             ao_state_free(state);
@@ -315,14 +352,16 @@ mod tests {
             // Two identical "assets"
             let inputs_ptr_0: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr()];
             let inputs_ptr_1: [*const f64; INPUTS] = [high.as_ptr(), low.as_ptr()];
-            let assets_ptrs = [inputs_ptr_0.as_ptr(), inputs_ptr_1.as_ptr()].as_ptr();
+            let assets_arr: [*const *const f64; 2] = [inputs_ptr_0.as_ptr(), inputs_ptr_1.as_ptr()];
+            let assets_ptrs = assets_arr.as_ptr();
             let options = [0f64; OPTIONS].as_ptr();
 
             let result = ao_simd_by_assets(assets_ptrs, 2, data_len, options, std::ptr::null(), 0);
 
             assert_eq!(result.error, CIndicatorError::Ok);
             assert_eq!(result.num_results, 2);
-            assert_eq!(result.num_outputs, 4); // ao, short_sma, long_sma, medprice
+            // Without optional outputs: only mandatory rows returned (ao)
+            assert_eq!(result.num_outputs, 1);
 
             let states_slice = slice::from_raw_parts(result.states, result.num_results);
             for i in 0..result.num_results {

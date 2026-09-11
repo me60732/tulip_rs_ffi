@@ -102,10 +102,19 @@ cc -O2 -o adosc_example examples/adosc_example.c \
    -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
 cc -O2 -o macd_example examples/macd_example.c \
    -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
+cc -O2 -o candlestick_example examples/candlestick_example.c \
+   -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
 
 ./adosc_example
 ./macd_example
+./candlestick_example
 ```
+
+`candlestick` is the exception to the `Vec<Vec<f64>>` output model (and has
+no SIMD entry points): per bar it reports zero or more matched pattern ids,
+CSR-packed into `bar_offsets`/`pattern_ids`, with metadata (name, Japanese
+name, forecast, bars) resolved via `candlestick_pattern_info()`/
+`candlestick_pattern_names()`. See `examples/candlestick_example.c`.
 
 (`info()`/`min_data()` metadata functions -- exposed in the Python/Node/
 Diplomat bindings -- aren't wrapped here yet, so the examples hardcode the
@@ -145,9 +154,16 @@ Memory ownership:
 - [x] `macd` (1 input, 3 options, 3 mandatory + 2 optional outputs)
 - [x] SIMD support for `adosc`/`macd` (`*_simd_by_assets`, `*_simd_by_options`)
 - [x] Examples for `adosc`/`macd` matching the Python binding's example data
-- [ ] Expand to full indicator coverage (candlestick patterns need separate
-      handling, same as `tulip_rs_diplomat`)
-- [ ] Auto-generate a C header (e.g. via `cbindgen`) instead of hand-declaring
-      prototypes in consuming code
-- [ ] Expose `info()`/`min_data()` metadata functions
+- [x] `candlestick` (special-cased: CSR-packed pattern-id output, no optional
+      outputs, scalar-only) + matching C example
+- [x] Expand to full indicator coverage: all 92 core `tulip_rs` indicators
+      wrapped (each with `*_indicator`/`*_batch`/`*_state_free`/
+      `*_simd_by_assets`/`*_simd_by_options` where the core supports it, plus
+      `*_info`/`*_min_data`), with per-module Rust unit tests (550 passing,
+      `cargo test --release`)
+- [x] Auto-generated C header: `include/tulip_rs_ffi.h`, generated with
+      `cbindgen --config cbindgen.toml --output include/tulip_rs_ffi.h`
+      (regenerate after any change to the `#[no_mangle] extern "C"` surface)
+- [x] Expose `info()`/`min_data()` metadata functions (`<name>_info` /
+      `<name>_min_data`, mirroring the core `Info`/`min_data`) 
 - [ ] Benchmark harness (mirroring `tulip_rs_diplomat/bench/c`)

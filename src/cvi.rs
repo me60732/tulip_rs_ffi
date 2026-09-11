@@ -68,7 +68,7 @@ pub unsafe extern "C" fn cvi_indicator(
 
     match Cvi::indicator(&inputs, &options, optional) {
         Ok((rows, state)) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             let state = Box::into_raw(Box::new(state)) as *mut c_void;
             CIndicatorResult {
                 error: CIndicatorError::Ok,
@@ -114,7 +114,7 @@ pub unsafe extern "C" fn cvi_batch(
 
     match state.batch_indicator(&inputs, optional) {
         Ok(rows) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             CBatchResult {
                 error: CIndicatorError::Ok,
                 outputs,
@@ -195,7 +195,8 @@ unsafe fn cvi_simd_by_assets_n<const N: usize>(
 
     match Cvi::indicator_by_assets::<N>(&refs, &options, optional) {
         Ok((results, states)) => {
-            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results);
+            let (outputs, output_lens, num_outputs, num_results) =
+                pack_simd_outputs(results, optional);
             let states = pack_states(states);
             CSimdResult {
                 error: CIndicatorError::Ok,
@@ -265,7 +266,8 @@ unsafe fn cvi_simd_by_options_n<const N: usize>(
 
     match Cvi::indicator_by_options::<N>(&inputs, &options, optional) {
         Ok((results, states)) => {
-            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results);
+            let (outputs, output_lens, num_outputs, num_results) =
+                pack_simd_outputs(results, optional);
             let states = pack_states(states);
             CSimdResult {
                 error: CIndicatorError::Ok,
@@ -289,9 +291,17 @@ mod tests {
 
     #[test]
     fn test_cvi_indicator() {
+        use crate::common::test::build_synthetic_data;
+
         let data_len = 20;
-        let high: Vec<f64> = (1..=data_len).map(|x| x as f64 + 1.0).collect();
-        let low: Vec<f64> = (1..=data_len).map(|x| x as f64 - 1.0).collect();
+        let high: Vec<f64> = build_synthetic_data(data_len)
+            .into_iter()
+            .map(|x| x + 1.0)
+            .collect();
+        let low: Vec<f64> = build_synthetic_data(data_len)
+            .into_iter()
+            .map(|x| x - 1.0)
+            .collect();
 
         let inputs = [high.as_ptr(), low.as_ptr()];
         let options = [10.0];
@@ -314,9 +324,17 @@ mod tests {
 
     #[test]
     fn test_cvi_batch() {
+        use crate::common::test::build_synthetic_data;
+
         let data_len = 20;
-        let high: Vec<f64> = (1..=data_len).map(|x| x as f64 + 1.0).collect();
-        let low: Vec<f64> = (1..=data_len).map(|x| x as f64 - 1.0).collect();
+        let high: Vec<f64> = build_synthetic_data(data_len)
+            .into_iter()
+            .map(|x| x + 1.0)
+            .collect();
+        let low: Vec<f64> = build_synthetic_data(data_len)
+            .into_iter()
+            .map(|x| x - 1.0)
+            .collect();
 
         let inputs = [high.as_ptr(), low.as_ptr()];
         let options = [10.0];
@@ -332,9 +350,15 @@ mod tests {
 
             assert_eq!(result.error, CIndicatorError::Ok);
 
-            // Second batch call
-            let high2: Vec<f64> = (21..=30).map(|x| x as f64 + 1.0).collect();
-            let low2: Vec<f64> = (21..=30).map(|x| x as f64 - 1.0).collect();
+            // Second batch call with exactly 10 elements (batch length)
+            let high2: Vec<f64> = build_synthetic_data(10)
+                .into_iter()
+                .map(|x| x + 1.0)
+                .collect();
+            let low2: Vec<f64> = build_synthetic_data(10)
+                .into_iter()
+                .map(|x| x - 1.0)
+                .collect();
 
             let inputs2 = [high2.as_ptr(), low2.as_ptr()];
 
@@ -350,12 +374,26 @@ mod tests {
 
     #[test]
     fn test_cvi_simd_by_assets() {
-        let data_len = 20;
-        let high1: Vec<f64> = (1..=data_len).map(|x| x as f64 + 1.0).collect();
-        let low1: Vec<f64> = (1..=data_len).map(|x| x as f64 - 1.0).collect();
+        use crate::common::test::build_synthetic_data;
 
-        let high2: Vec<f64> = (31..=60).map(|x| x as f64 + 1.0).collect();
-        let low2: Vec<f64> = (31..=60).map(|x| x as f64 - 1.0).collect();
+        let data_len = 20;
+        let high1: Vec<f64> = build_synthetic_data(data_len)
+            .into_iter()
+            .map(|x| x + 1.0)
+            .collect();
+        let low1: Vec<f64> = build_synthetic_data(data_len)
+            .into_iter()
+            .map(|x| x - 1.0)
+            .collect();
+
+        let high2: Vec<f64> = build_synthetic_data(data_len)
+            .into_iter()
+            .map(|x| x + 1.0)
+            .collect();
+        let low2: Vec<f64> = build_synthetic_data(data_len)
+            .into_iter()
+            .map(|x| x - 1.0)
+            .collect();
 
         // For SIMD by assets with INPUTS=2:
         // Each asset has 2 input pointers, so we have 2 arrays of 2 elements each
@@ -385,9 +423,17 @@ mod tests {
 
     #[test]
     fn test_cvi_simd_by_options() {
+        use crate::common::test::build_synthetic_data;
+
         let data_len = 50;
-        let high: Vec<f64> = (1..=data_len).map(|x| x as f64 + 1.0).collect();
-        let low: Vec<f64> = (1..=data_len).map(|x| x as f64 - 1.0).collect();
+        let high: Vec<f64> = build_synthetic_data(data_len)
+            .into_iter()
+            .map(|x| x + 1.0)
+            .collect();
+        let low: Vec<f64> = build_synthetic_data(data_len)
+            .into_iter()
+            .map(|x| x - 1.0)
+            .collect();
 
         // inputs is a single array of INPUTS pointers
         let inputs = [high.as_ptr(), low.as_ptr()];

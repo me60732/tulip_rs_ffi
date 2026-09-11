@@ -1,0 +1,3 @@
+vendor/
+tulip_rs_ffi_bench
+.env

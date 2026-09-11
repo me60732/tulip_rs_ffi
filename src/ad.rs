@@ -10,7 +10,7 @@
 //! Parameter order convention (kept consistent across every function in
 //! this crate): each pointer parameter is immediately followed by the
 //! count(s) that describe it, e.g. `inputs, data_len, options, ...,
-//! optional_outputs, num_optional`.
+//! optional_outputs, numoptional`.
 //!
 //! SIMD entry points:
 //! - `ad_simd_by_assets`: compute AD for N assets simultaneously,
@@ -30,13 +30,32 @@ use tulip_rs::indicators::ad::{Ad, IndicatorState as AdState, INPUTS, OPTIONS};
 use tulip_rs::types::IndicatorError;
 
 use crate::common::{
-    optional_outputs_slice, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
-    read_simd_assets_inputs, CBatchResult, CIndicatorError, CIndicatorResult, CSimdResult,
+    optional_outputs_slice, pack_info, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
+    read_simd_assets_inputs, CBatchResult, CIndicatorError, CIndicatorInfo, CIndicatorResult,
+    CSimdResult,
 };
 
 /// Opaque state handle returned by `ad_indicator()` and consumed by
 /// `ad_batch()` / `ad_state_free()`.
 pub type AdStateHandle = AdState;
+
+/// Returns static metadata about the `ad` indicator: its name, input
+/// names, option names, and (mandatory/optional) output names, mirroring
+/// `Ad::INFO`.
+///
+/// The returned strings are leaked, process-lifetime C strings -- read them,
+/// don't free them.
+#[no_mangle]
+pub extern "C" fn ad_info() -> CIndicatorInfo {
+    pack_info(&Ad::INFO)
+}
+
+/// Returns the minimum number of bars `ad` needs to produce any output at
+/// all, given `options`.
+#[no_mangle]
+pub extern "C" fn ad_min_data(_options: *const f64) -> usize {
+    Ad::min_data(&[])
+}
 
 /// Runs `ad` over `data_len` bars.
 ///
@@ -56,15 +75,15 @@ pub unsafe extern "C" fn ad_indicator(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CIndicatorResult {
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
     let _options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Ad::indicator(&inputs, &_options, optional) {
         Ok((rows, state)) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             let state = Box::into_raw(Box::new(state)) as *mut c_void;
             CIndicatorResult {
                 error: CIndicatorError::Ok,
@@ -96,7 +115,7 @@ pub unsafe extern "C" fn ad_batch(
     inputs: *const *const f64,
     data_len: usize,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CBatchResult {
     if state.is_null() {
         return CBatchResult::err(IndicatorError::InvalidIndicatorState);
@@ -104,11 +123,11 @@ pub unsafe extern "C" fn ad_batch(
     let state = &mut *(state as *mut AdStateHandle);
 
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match state.batch_indicator(&inputs, optional) {
         Ok(rows) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             CBatchResult {
                 error: CIndicatorError::Ok,
                 outputs,
@@ -159,13 +178,13 @@ pub unsafe extern "C" fn ad_simd_by_assets(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     match num_assets {
-        2 => ad_simd_by_assets_n::<2>(inputs, data_len, options, optional_outputs, num_optional),
-        4 => ad_simd_by_assets_n::<4>(inputs, data_len, options, optional_outputs, num_optional),
-        8 => ad_simd_by_assets_n::<8>(inputs, data_len, options, optional_outputs, num_optional),
-        16 => ad_simd_by_assets_n::<16>(inputs, data_len, options, optional_outputs, num_optional),
+        2 => ad_simd_by_assets_n::<2>(inputs, data_len, options, optional_outputs, numoptional),
+        4 => ad_simd_by_assets_n::<4>(inputs, data_len, options, optional_outputs, numoptional),
+        8 => ad_simd_by_assets_n::<8>(inputs, data_len, options, optional_outputs, numoptional),
+        16 => ad_simd_by_assets_n::<16>(inputs, data_len, options, optional_outputs, numoptional),
         _ => CSimdResult::err(IndicatorError::InvalidInputs),
     }
 }
@@ -175,18 +194,18 @@ unsafe fn ad_simd_by_assets_n<const N: usize>(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     // `owned` holds the per-asset input slices; `refs` borrows from it, so
     // both must live in this stack frame for the duration of the call.
     let owned = read_simd_assets_inputs::<N, INPUTS>(inputs, data_len);
     let refs: [&[&[f64]; INPUTS]; N] = std::array::from_fn(|i| &owned[i]);
     let _options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Ad::indicator_by_assets::<N>(&refs, &_options, optional) {
         Ok((results, states)) => {
-            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results);
+            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results, optional);
             let states = pack_states(states);
             CSimdResult {
                 error: CIndicatorError::Ok,
@@ -207,6 +226,21 @@ mod tests {
     use crate::common::{
         tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free,
     };
+
+    #[test]
+    fn test_ad_info() {
+        let info = ad_info();
+        assert!(info.inputs.len > 0);
+        assert_eq!(info.options.len, 0);
+        assert!(info.outputs.len > 0);
+        assert_eq!(info.optional_outputs.len, 0);
+    }
+
+    #[test]
+    fn test_ad_min_data() {
+        let min = ad_min_data(std::ptr::null());
+        assert!(min > 0);
+    }
 
     #[test]
     fn test_ad_indicator() {
@@ -303,10 +337,13 @@ mod tests {
                     volume2.as_ptr(),
                 ],
             ];
-            // Cast to the expected pointer type
-            let assets_ptrs =
-                &assets_array as *const [[*const f64; INPUTS]; 2] as *const *const *const f64;
-            let options = [0f64; OPTIONS].as_ptr();
+            // Cast to the expected pointer type: an array of 2 pointers, each
+            // pointing to one asset's array of INPUTS data pointers.
+            let assets_ptrs_arr: [*const *const f64; 2] =
+                [assets_array[0].as_ptr(), assets_array[1].as_ptr()];
+            let assets_ptrs = assets_ptrs_arr.as_ptr();
+            let options_arr = [0f64; OPTIONS];
+            let options = options_arr.as_ptr();
 
             let result = ad_simd_by_assets(assets_ptrs, 2, data_len, options, std::ptr::null(), 0);
 

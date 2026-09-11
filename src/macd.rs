@@ -23,14 +23,36 @@ use tulip_rs::indicators::macd::{IndicatorState as MacdState, Macd, INPUTS, OPTI
 use tulip_rs::types::IndicatorError;
 
 use crate::common::{
-    optional_outputs_slice, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
-    read_simd_assets_inputs, read_simd_options, CBatchResult, CIndicatorError, CIndicatorResult,
-    CSimdResult,
+    optional_outputs_slice, pack_info, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
+    read_simd_assets_inputs, read_simd_options, CBatchResult, CIndicatorError, CIndicatorInfo,
+    CIndicatorResult, CSimdResult,
 };
 
 /// Opaque state handle returned by `macd_indicator()` and consumed by
 /// `macd_batch()` / `macd_state_free()`.
 pub type MacdStateHandle = MacdState;
+
+/// Returns static metadata about the `macd` indicator: its name, input
+/// names, option names, and (mandatory/optional) output names, mirroring
+/// `Macd::INFO`.
+///
+/// The returned strings are leaked, process-lifetime C strings -- read them,
+/// don't free them.
+#[no_mangle]
+pub extern "C" fn macd_info() -> CIndicatorInfo {
+    pack_info(&Macd::INFO)
+}
+
+/// Returns the minimum number of bars `macd` needs to produce any output at
+/// all, given `options`.
+///
+/// # Safety
+/// `options` must point to `OPTIONS` (3) valid `f64`s.
+#[no_mangle]
+pub unsafe extern "C" fn macd_min_data(options: *const f64) -> usize {
+    let options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
+    Macd::min_data(&options)
+}
 
 /// Runs `macd` over `data_len` bars.
 ///
@@ -46,7 +68,7 @@ pub type MacdStateHandle = MacdState;
 /// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
 ///   `data_len` valid `f64`s.
 /// - `options` must point to `OPTIONS` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s (pass null + 0 to request no optional outputs).
 #[no_mangle]
 pub unsafe extern "C" fn macd_indicator(
@@ -54,15 +76,15 @@ pub unsafe extern "C" fn macd_indicator(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CIndicatorResult {
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
     let options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Macd::indicator(&inputs, &options, optional) {
         Ok((rows, state)) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             let state = Box::into_raw(Box::new(state)) as *mut c_void;
             CIndicatorResult {
                 error: CIndicatorError::Ok,
@@ -87,7 +109,7 @@ pub unsafe extern "C" fn macd_indicator(
 ///   `macd_indicator()`.
 /// - `inputs` must point to `INPUTS` valid `*const f64`s, each pointing to
 ///   `data_len` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s.
 #[no_mangle]
 pub unsafe extern "C" fn macd_batch(
@@ -95,7 +117,7 @@ pub unsafe extern "C" fn macd_batch(
     inputs: *const *const f64,
     data_len: usize,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CBatchResult {
     if state.is_null() {
         return CBatchResult::err(IndicatorError::InvalidIndicatorState);
@@ -103,11 +125,11 @@ pub unsafe extern "C" fn macd_batch(
     let state = &mut *(state as *mut MacdStateHandle);
 
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match state.batch_indicator(&inputs, optional) {
         Ok(rows) => {
-            let (outputs, output_lens, num_outputs) = pack_outputs(rows);
+            let (outputs, output_lens, num_outputs) = pack_outputs(rows, optional);
             CBatchResult {
                 error: CIndicatorError::Ok,
                 outputs,
@@ -152,7 +174,7 @@ pub unsafe extern "C" fn macd_state_free(state: *mut c_void) {
 ///   `INPUTS` valid non-null `*const f64`s, each pointing to `data_len` valid
 ///   `f64`s.
 /// - `options` must point to `OPTIONS` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s.
 #[no_mangle]
 pub unsafe extern "C" fn macd_simd_by_assets(
@@ -161,13 +183,13 @@ pub unsafe extern "C" fn macd_simd_by_assets(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     match num_assets {
-        2 => macd_simd_by_assets_n::<2>(inputs, data_len, options, optional_outputs, num_optional),
-        4 => macd_simd_by_assets_n::<4>(inputs, data_len, options, optional_outputs, num_optional),
-        8 => macd_simd_by_assets_n::<8>(inputs, data_len, options, optional_outputs, num_optional),
-        16 => macd_simd_by_assets_n::<16>(inputs, data_len, options, optional_outputs, num_optional),
+        2 => macd_simd_by_assets_n::<2>(inputs, data_len, options, optional_outputs, numoptional),
+        4 => macd_simd_by_assets_n::<4>(inputs, data_len, options, optional_outputs, numoptional),
+        8 => macd_simd_by_assets_n::<8>(inputs, data_len, options, optional_outputs, numoptional),
+        16 => macd_simd_by_assets_n::<16>(inputs, data_len, options, optional_outputs, numoptional),
         _ => CSimdResult::err(IndicatorError::InvalidInputs),
     }
 }
@@ -177,18 +199,19 @@ unsafe fn macd_simd_by_assets_n<const N: usize>(
     data_len: usize,
     options: *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     // `owned` holds the per-asset input slices; `refs` borrows from it, so
     // both must live in this stack frame for the duration of the call.
     let owned = read_simd_assets_inputs::<N, INPUTS>(inputs, data_len);
     let refs: [&[&[f64]; INPUTS]; N] = std::array::from_fn(|i| &owned[i]);
     let options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Macd::indicator_by_assets::<N>(&refs, &options, optional) {
         Ok((results, states)) => {
-            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results);
+            let (outputs, output_lens, num_outputs, num_results) =
+                pack_simd_outputs(results, optional);
             let states = pack_states(states);
             CSimdResult {
                 error: CIndicatorError::Ok,
@@ -223,7 +246,7 @@ unsafe fn macd_simd_by_assets_n<const N: usize>(
 ///   pointing to `data_len` valid `f64`s.
 /// - `options` must point to `num_option_sets` valid pointers, each
 ///   pointing to `OPTIONS` valid `f64`s.
-/// - `optional_outputs`, if non-null, must point to `num_optional` valid
+/// - `optional_outputs`, if non-null, must point to `numoptional` valid
 ///   `bool`s.
 #[no_mangle]
 pub unsafe extern "C" fn macd_simd_by_options(
@@ -232,13 +255,15 @@ pub unsafe extern "C" fn macd_simd_by_options(
     options: *const *const f64,
     num_option_sets: usize,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     match num_option_sets {
-        2 => macd_simd_by_options_n::<2>(inputs, data_len, options, optional_outputs, num_optional),
-        4 => macd_simd_by_options_n::<4>(inputs, data_len, options, optional_outputs, num_optional),
-        8 => macd_simd_by_options_n::<8>(inputs, data_len, options, optional_outputs, num_optional),
-        16 => macd_simd_by_options_n::<16>(inputs, data_len, options, optional_outputs, num_optional),
+        2 => macd_simd_by_options_n::<2>(inputs, data_len, options, optional_outputs, numoptional),
+        4 => macd_simd_by_options_n::<4>(inputs, data_len, options, optional_outputs, numoptional),
+        8 => macd_simd_by_options_n::<8>(inputs, data_len, options, optional_outputs, numoptional),
+        16 => {
+            macd_simd_by_options_n::<16>(inputs, data_len, options, optional_outputs, numoptional)
+        }
         _ => CSimdResult::err(IndicatorError::InvalidInputs),
     }
 }
@@ -248,15 +273,16 @@ unsafe fn macd_simd_by_options_n<const N: usize>(
     data_len: usize,
     options: *const *const f64,
     optional_outputs: *const bool,
-    num_optional: usize,
+    numoptional: usize,
 ) -> CSimdResult {
     let inputs = read_inputs::<INPUTS>(inputs, data_len);
     let options = read_simd_options::<N, OPTIONS>(options);
-    let optional = optional_outputs_slice(optional_outputs, num_optional);
+    let optional = optional_outputs_slice(optional_outputs, numoptional);
 
     match Macd::indicator_by_options::<N>(&inputs, &options, optional) {
         Ok((results, states)) => {
-            let (outputs, output_lens, num_outputs, num_results) = pack_simd_outputs(results);
+            let (outputs, output_lens, num_outputs, num_results) =
+                pack_simd_outputs(results, optional);
             let states = pack_states(states);
             CSimdResult {
                 error: CIndicatorError::Ok,
@@ -268,5 +294,28 @@ unsafe fn macd_simd_by_options_n<const N: usize>(
             }
         }
         Err(e) => CSimdResult::err(e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_macd_info() {
+        let info = macd_info();
+        assert!(info.inputs.len > 0);
+        assert_eq!(info.options.len, OPTIONS);
+        assert!(info.outputs.len > 0);
+        assert!(info.optional_outputs.len > 0);
+    }
+
+    #[test]
+    fn test_macd_min_data() {
+        unsafe {
+            let options: [f64; OPTIONS] = [12.0, 26.0, 9.0];
+            let min = macd_min_data(options.as_ptr());
+            assert!(min > 0);
+        }
     }
 }

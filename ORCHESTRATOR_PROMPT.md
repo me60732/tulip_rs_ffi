@@ -52,7 +52,7 @@ prompt template" below for what to hand them):
 ## The established pattern (must be followed exactly)
 
 Every indicator module (e.g. `src/rsi.rs` for the `rsi` indicator) must
-expose exactly these five `#[no_mangle] extern "C"` functions, following
+expose exactly these seven `#[no_mangle] extern "C"` functions, following
 `adosc.rs`/`macd.rs` verbatim in style, naming, and parameter order:
 
 ```rust
@@ -61,6 +61,8 @@ expose exactly these five `#[no_mangle] extern "C"` functions, following
 <name>_state_free(state)
 <name>_simd_by_assets(inputs, num_assets, data_len, options, optional_outputs, num_optional) -> CSimdResult
 <name>_simd_by_options(inputs, data_len, options, num_option_sets, optional_outputs, num_optional) -> CSimdResult
+<name>_info() -> CIndicatorInfo
+<name>_min_data(options) -> usize
 ```
 
 Hard rules, all already solved correctly in `adosc.rs`/`macd.rs` -- copy the
@@ -104,6 +106,19 @@ pattern, don't reinvent it:
 7. Error handling: `CIndicatorResult::err(e)` / `CBatchResult::err(e)` /
    `CSimdResult::err(e)` on any `Err`, `IndicatorError::InvalidIndicatorState`
    if `state.is_null()` in `<name>_batch`.
+8. **`<name>_info()`** takes no arguments and returns
+   `pack_info(&<Name>::INFO)` (a `CIndicatorInfo`) -- reuse `pack_info`
+   from `common.rs` as-is, do not reimplement it. `<Name>::INFO` is a
+   `tulip_rs::types::Info` static, and `pack_info` already handles leaking
+   its `name`, `full_name`, `indicator_type`, `inputs`, `options`,
+   `outputs`, `optional_outputs`, and `display_groups` fields into a
+   C-ABI-friendly (intentionally leaked, read-only, never freed by the
+   caller) struct. This function is safe (not `unsafe extern "C"`) since it
+   takes no pointer arguments.
+9. **`<name>_min_data(options: *const f64) -> usize`** reconstructs the
+   `[f64; OPTIONS]` array from `options` (same pattern as in
+   `<name>_indicator`) and returns `<Name>::min_data(&options)`. This
+   function is `unsafe extern "C"` since it dereferences `options`.
 
 ## Per-indicator specifics: how to fill in the template
 
@@ -198,8 +213,16 @@ For each indicator in the batch, the test should:
 5. Call `<name>_simd_by_options(...)` with `num_option_sets = 2` (2 valid
    option sets), assert `Ok`, free each state via `<name>_state_free`, then
    `tulip_ffi_simd_result_free`.
-6. All of this runs inside `unsafe { ... }` blocks as needed (the wrapper
-   functions are all `unsafe extern "C" fn`).
+6. Call `<name>_info()`, assert the returned `CIndicatorInfo`'s `inputs.len`,
+   `options.len`, `outputs.len`, and `optional_outputs.len` match `INPUTS`,
+   `OPTIONS`, and the expected mandatory/optional output counts from
+   `<Name>::INFO`. No need to free anything (its backing memory is
+   intentionally leaked, per `common.rs`'s documented convention).
+7. Call `<name>_min_data(options)` with a valid options array, assert the
+   result is a sane, nonzero (or otherwise expected) `usize`.
+8. All of this runs inside `unsafe { ... }` blocks as needed (the wrapper
+   functions are all `unsafe extern "C" fn`, except `<name>_info` which
+   takes no pointer arguments and is safe to call directly).
 
 This does not need to verify numerical correctness against a reference
 (the underlying core `tulip_rs` library is already tested elsewhere) --

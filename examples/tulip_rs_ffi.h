@@ -13,6 +13,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef enum {
     C_OK = 0,
@@ -93,5 +94,82 @@ extern CSimdResult macd_simd_by_assets(
 extern CSimdResult macd_simd_by_options(
     double const *const *inputs, size_t data_len, double const *const *options,
     size_t num_option_sets, bool const *optional_outputs, size_t num_optional);
+
+// ---- Candlestick ----
+// Unlike every other indicator here, candlestick output is not numeric
+// rows: each output bar carries zero or more matched pattern ids,
+// CSR-packed into `bar_offsets`/`pattern_ids` (the patterns on bar i are
+// pattern_ids[bar_offsets[i] .. bar_offsets[i+1]]; empty = no pattern).
+// Resolve ids via candlestick_pattern_info()/candlestick_pattern_names().
+// Candlestick is scalar-only (no *_simd_* entry points) and has no
+// optional outputs.
+
+typedef enum {
+    C_FORECAST_BEARISH_REVERSAL = 0,
+    C_FORECAST_BULLISH_REVERSAL = 1,
+    C_FORECAST_BEARISH_CONTINUATION = 2,
+    C_FORECAST_BULLISH_CONTINUATION = 3,
+    C_FORECAST_BEARISH_REVERSAL_OR_CONTINUATION = 4,
+    C_FORECAST_BULLISH_REVERSAL_OR_CONTINUATION = 5,
+} CForecastType;
+
+// A C array of null-terminated strings. Backing memory is leaked,
+// process-lifetime: read it, do not free it.
+typedef struct {
+    const char *const *ptr;
+    size_t len;
+} CStringArray;
+
+// Metadata for one candlestick pattern (the Rust/Python `get_info()` dict).
+// All strings are leaked, process-lifetime: read them, do not free them.
+// Out-of-range ids return id == UINT32_MAX with null strings.
+typedef struct {
+    uint32_t id;
+    const char *name;
+    const char *full_name;
+    const char *japanese_name;
+    CForecastType forecast;
+    uint32_t bars;
+} CCandlePatternInfo;
+
+// Result of candlestick_indicator(): CSR pattern output plus an opaque
+// continuation state (free buffers with candlestick_result_free(), the
+// state separately with candlestick_state_free()).
+typedef struct {
+    CIndicatorError error;
+    size_t num_bars;        // number of output bars
+    size_t total_patterns;  // entries in pattern_ids
+    uint32_t *bar_offsets;  // num_bars + 1 row offsets into pattern_ids
+    uint32_t *pattern_ids;  // total_patterns pattern table ids
+    void *state;            // opaque continuation state (NULL on error)
+} CCandleStickResult;
+
+// Result of candlestick_batch(): same CSR layout, no state (mutated in place).
+typedef struct {
+    CIndicatorError error;
+    size_t num_bars;
+    size_t total_patterns;
+    uint32_t *bar_offsets;
+    uint32_t *pattern_ids;
+} CCandleStickBatchResult;
+
+extern size_t candlestick_min_data(const double *options);
+extern size_t candlestick_num_patterns(void);
+extern CCandlePatternInfo candlestick_pattern_info(uint32_t id);
+extern CStringArray candlestick_pattern_names(void);
+
+// inputs: 4 series (open, high, low, close), each data_len long.
+// options: 3 values (candle_period, trend_period, trend_signal_period).
+// forecast: 0..=5 filters to that CForecastType; -1 (or any other value)
+// returns all detected patterns.
+extern CCandleStickResult candlestick_indicator(
+    double const *const *inputs, size_t data_len, double const *options,
+    int32_t forecast);
+extern CCandleStickBatchResult candlestick_batch(
+    void *state, double const *const *inputs, size_t data_len, int32_t forecast);
+
+extern void candlestick_result_free(CCandleStickResult result);
+extern void candlestick_batch_result_free(CCandleStickBatchResult result);
+extern void candlestick_state_free(void *state);
 
 #endif // TULIP_RS_FFI_H
