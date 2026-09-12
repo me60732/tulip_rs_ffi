@@ -3,10 +3,8 @@
 // Template indicator demonstrating a *multi-input* indicator: the ffi
 // API takes `inputs` as an array of INPUTS pointers (here: high, low,
 // close -- matching tulip_rs::indicators::stoch::Stoch::INFO.inputs order),
-// each stock->len f64s long. No flattening step is needed (unlike the
-// diplomat harness this file was adapted from); the pointer array is built
-// inside the timed region since constructing it is what a real C caller's
-// hot loop looks like.
+// each stock->len f64s long. The pointer array is built inside the timed
+// region since constructing it is what a real C caller's hot loop looks like.
 
 #include "tulip_rs_ffi.h"
 #include "../bench_common.h"

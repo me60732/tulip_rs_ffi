@@ -18,10 +18,7 @@ static void bench_adxr(void *ctx_) {
     AdxrCtx *ctx = ctx_;
     const double *inputs[ADXR_INPUTS] = {ctx->stock->high, ctx->stock->low, ctx->stock->close};
     double opts[ADXR_OPTIONS] = {ctx->period};
-    // Mandatory outputs only -- exactly what the old diplomat bench measured
-    // (its `OptionBoolView{.is_ok = true}` was an empty Some slice, which the
-    // core treats as "all optional outputs off"), and what C_tulip/talib
-    // produce. Pass {true,true,true,true} here to also price in adx/dx/atr/tr.
+    // Mandatory outputs only -- mirrors the old harness measurement.
     struct CIndicatorResult r = adxr_indicator(inputs, ctx->stock->len, opts, NULL, 0);
     if (r.error != C_INDICATOR_ERROR_OK) {
         fprintf(stderr, "[error] adxr_indicator failed: %d\n", (int) r.error);

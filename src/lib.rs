@@ -1,11 +1,10 @@
 //! `tulip_rs_ffi` -- a hand-rolled `extern "C"` FFI layer around the core
 //! `tulip_rs` indicator library.
 //!
-//! Unlike `tulip_rs_diplomat` (which generates bindings via the Diplomat
-//! tool and its `DiplomatF64View` ABI), this crate exposes plain C
-//! functions with a Tulip-Indicators-style calling convention: raw
-//! pointers in, a `Result`-style struct out. Output buffers are always
-//! allocated by the indicator function itself (never by the caller).
+//! This crate exposes plain C functions with a Tulip-Indicators-style
+//! calling convention: raw pointers in, a `Result`-style struct out. Output
+//! buffers are always allocated by the indicator function itself (never by
+//! the caller).
 //!
 //! See `common.rs` for the shared `CIndicatorResult`/`CBatchResult` shapes
 //! and memory-ownership rules, and `adosc.rs`/`macd.rs` for the canonical

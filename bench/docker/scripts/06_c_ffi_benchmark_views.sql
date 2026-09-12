@@ -18,9 +18,6 @@
 --   'C_tulip'                           — Tulip Indicators (C), tulip_rs_ffi/bench/tulip_indicators submodule
 --   'talib'                             — TA-Lib, tulip_rs_ffi/bench/ta_lib_src submodule
 --
--- (Superseded 'tulip_rs_diplomat_c' / Diplomat-generated FFI harness — the
--- Diplomat bindings and their benchmark harness have been removed entirely.)
---
 -- SIMD note: option-less indicators have no *_simd_by_options path (nothing
 -- to batch options over), so they only produce *_simd_by_assets rows — same
 -- as the Node harness where a SIMD variant doesn't exist.
@@ -43,9 +40,6 @@ DROP VIEW IF EXISTS c_ffi_simd_simplified_comparison;
 DROP VIEW IF EXISTS c_ffi_simd_performance_comparison;
 DROP VIEW IF EXISTS c_ffi_avg_options_comparison;
 DROP VIEW IF EXISTS c_ffi_performance_comparison;
--- Drop the superseded Diplomat-era views if they still exist from a previous run.
-DROP VIEW IF EXISTS c_diplomat_avg_options_comparison;
-DROP VIEW IF EXISTS c_diplomat_performance_comparison;
 
 -- ---------------------------------------------------------------------------
 -- c_ffi_performance_comparison

@@ -1,7 +1,6 @@
 // C benchmark harness for the tulip_rs_ffi (hand-rolled extern "C") bindings.
 //
-// Mirrors the methodology used by tulip_rs_diplomat/bench/c, tulip_rs_python/bench
-// and tulip_rs_node/bench:
+// Mirrors the methodology used by tulip_rs_python/bench and tulip_test suites:
 //   - Same 4 stocks, same 6,705-bar real OHLCV history (fetched live from Postgres via libpq)
 //   - Same 4 option sets per indicator
 //   - warmup + (repeat independent samples, each averaging `number` back-to-back
@@ -30,9 +29,9 @@
 
 // Reference implementations for comparison -- same two libraries used by the
 // core tulip_rs Rust criterion benches (tulip_rs/tulip_test/benches) and by
-// the diplomat C bench (tulip_rs_diplomat/bench/c), built from the git
-// submodules vendored under bench/ (see Makefile): Tulip Indicators' C library
-// (implementation_type = "C_tulip") and TA-Lib (implementation_type = "talib").
+// the C benchmark harness built from the git submodules vendored under bench/
+// (see Makefile): Tulip Indicators' C library (implementation_type = "C_tulip")
+// and TA-Lib (implementation_type = "talib").
 #include "indicators.h"
 #include "ta_libc.h"
 

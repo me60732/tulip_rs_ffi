@@ -3,8 +3,8 @@
 A small C program that benchmarks the `tulip_rs_ffi` hand-rolled `extern "C"`
 bindings directly — no wrapper, no other language runtime — and logs results
 into the same shared `indicator_benchmark` Postgres database used by every
-other tulip-rs binding's benchmark suite (Python, Node, Swift/UniFFI, and the
-former Diplomat C harness), so results are directly comparable via SQL.
+other tulip-rs binding's benchmark suite (Python, Node, Swift/UniFFI), so
+results are directly comparable via SQL.
 
 All 94 non-candlestick indicators are covered (candlestick pattern
 recognition is out of scope for this harness -- it uses a different,
@@ -22,11 +22,8 @@ data, where a genuine equivalent exists:
 Both are built from git submodules vendored directly under `bench/`
 (`bench/tulip_indicators`, `bench/ta_lib_src`), pinned to the same commits the
 core Rust criterion benches use, so results are directly comparable across the
-Rust, Python, Node, Swift, Diplomat-C, and this FFI-C suite in the same
+Rust, Python, Node, Swift, and this FFI-C suite in the same
 `indicator_benchmark` database.
-
-This harness was ported from `tulip_rs_diplomat/bench/c` (kept here as a
-self-contained copy; no files link to the diplomat directory).
 
 ## Layout
 
@@ -97,12 +94,34 @@ runtime via libpq; no pre-fetched CSV files are needed.
 
 ## Running
 
-Copy `.env.example` to `.env` and edit it (or export env vars inline), then
-either run the binary directly or use `./run_bench.sh` for the full
-build-and-run pipeline:
+The one-command way is `./run_bench.sh`, which builds and runs everything
+end-to-end: the `tulip_rs_ffi` cdylib (`cargo build --release`), the C harness
+and its vendored reference libraries (`make`), then executes the full 94-indicator
+benchmark suite:
 
 ```bash
-./tulip_rs_ffi_bench        # or: ./run_bench.sh
+./run_bench.sh            # build cdylib + harness, then run all benchmarks
+```
+
+| Flag | Effect |
+|------|--------|
+| _(none)_ | cargo build → make → run (default) |
+| `--no-build` | Skip steps 1–2, run the existing `tulip_rs_ffi_bench` binary as-is |
+| `--clean` | `make clean` first, forcing a full rebuild of the harness and vendored libraries |
+| `-h` / `--help` | Print the usage header |
+
+All env vars recognized by `bench.c` (see table below) can be exported before
+invoking the script or set in `bench/.env` — e.g. a full logged run:
+
+```bash
+BENCHMARK_LOG_TO_DB=1 ./run_bench.sh
+```
+
+Alternatively, copy `.env.example` to `.env` and drive the binary directly
+(e.g. to iterate without the build steps):
+
+```bash
+./tulip_rs_ffi_bench
 ```
 
 `.env` is discovered by walking up from the current working directory (like
@@ -134,8 +153,9 @@ same variable names as `tulip_rs_python/bench/.env` / `tulip_rs_node`:
 | `BENCHMARK_DATABASE_URL` | `postgres://tulip:tulip@localhost:5432/indicator_benchmark` | Result DB |
 | `DOTENV_PATH` | (walks up from CWD for `.env`) | Override to point at a specific env file |
 
-Results are logged under `implementation_type` = `tulip_rs_ffi_c`,
-`C_tulip`, or `talib`.
+Results are logged under `implementation_type` = `tulip_rs_ffi_c`, `C_tulip`,
+or `talib`. For indicators with options, ~2 extra SIMD rows per indicator/stock
+appear (`tulip_rs_ffi_c_simd_by_assets`, `tulip_rs_ffi_c_simd_by_options`).
 
 ## Reference implementations
 
@@ -147,6 +167,8 @@ back-to-back in the same process:
 | `tulip_rs_ffi_c` | `tulip_rs_ffi` (this crate) | `../target/release/libtulip_rs_ffi.so` |
 | `C_tulip` | [Tulip Indicators](https://tulipindicators.org/) | `bench/tulip_indicators` submodule, compiled from `tiamalgamation.c` |
 | `talib` | [TA-Lib](https://ta-lib.org/) | `bench/ta_lib_src` submodule's vendored `dist/ta-lib_0.7.1_amd64.deb`, extracted (its current checkout has no buildable `src/ta_func` tree, so we reuse the prebuilt static archive instead of recompiling from source) |
+| `tulip_rs_ffi_c_simd_by_assets` | `tulip_rs_ffi` (this crate) — SIMD variant | `<ind>_simd_by_assets`; one option set computed across 4 assets in a single call, logged once per option set with stock symbol `All`; option-less indicators log a single row |
+| `tulip_rs_ffi_c_simd_by_options` | `tulip_rs_ffi` (this crate) — SIMD variant | `<ind>_simd_by_options`; 4 option sets computed on one asset in a single call, one timing covers all 4 sets, the first option set logged as the representative key; only indicators that accept options have this variant |
 
 Not every indicator has a genuine equivalent in both reference libraries --
 where one doesn't exist, that comparison is simply omitted for that
@@ -199,7 +221,14 @@ Same as `tulip_rs_python`/`tulip_rs_node`/`tulip_rs_swift`:
    `tulip_rs_python/bench/tulip_rs_bench/indicators/bench_<name>.py`).
    Use the `log_and_print()` helper (not `record_row`/`print_row` directly),
    with `implementation_type` string `"tulip_rs_ffi_c"`.
-3. Add `#include "bench_indicators/<name>.c"` to `bench.c` in alphabetical
+3. Mirror the SIMD pattern: copy the SIMD block structure from
+   `bench_indicators/sma.c` (with options: both variants) / `ad.c`
+   (option-less: by-assets only). **CRITICAL:** every per-asset input row must
+   list ALL `<IND>_INPUTS` fields (high, low, close, volume as applicable)
+   matching the scalar function's input order — under-filled C initializers
+   silently NULL the remaining slots and segfault inside the FFI call (this
+   actually happened with cci/chaikinmf/etc.).
+4. Add `#include "bench_indicators/<name>.c"` to `bench.c` in alphabetical
    order among the existing includes, and call `run_<name>(...)` from
    `main()` in the same alphabetical position.
-4. Run `make` and fix any compile/link errors.
+5. Run `make` and fix any compile/link errors.
