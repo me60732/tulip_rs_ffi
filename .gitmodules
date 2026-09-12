@@ -1,0 +1,6 @@
+[submodule "bench/tulip_indicators"]
+	path = bench/tulip_indicators
+	url = https://github.com/TulipCharts/tulipindicators
+[submodule "bench/ta_lib_src"]
+	path = bench/ta_lib_src
+	url = https://github.com/TA-Lib/ta-lib

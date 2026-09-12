@@ -1,6 +1,5 @@
-//! Generates `include/tulip_rs_ffi_counts.h` and
-//! `examples/tulip_rs_ffi_counts.h` -- one `#define <NAME>_INPUTS N` /
-//! `#define <NAME>_OPTIONS N` pair per indicator, read directly from the
+//! Generates `include/tulip_rs_ffi_counts.h` -- one `#define <NAME>_INPUTS N`
+//! / `#define <NAME>_OPTIONS N` pair per indicator, read directly from the
 //! real `tulip_rs::indicators::<name>::{INPUTS, OPTIONS}` constants at
 //! *build time* (this crate depends on `tulip_rs` as a build-dependency
 //! purely for this).
@@ -13,11 +12,9 @@
 //! runs the real Rust code, so the numbers it writes out can never drift
 //! from the core crate -- there's nothing to keep in sync by hand.
 //!
-//! The two output locations mirror the crate's two existing headers:
-//! `include/tulip_rs_ffi.h` (cbindgen's output, for external consumers) and
-//! `examples/tulip_rs_ffi.h` (the hand-written header the bundled examples
-//! build against, with no `-I` flag). Both `#include
-//! "tulip_rs_ffi_counts.h"` from their own directory.
+//! `include/tulip_rs_ffi.h` (cbindgen's generated header, the single header
+//! both external consumers and the bundled examples build against) pulls
+//! this in automatically via `after_includes` in `cbindgen.toml`.
 //!
 //! The only thing maintained by hand here is the list of indicator names
 //! below -- and that's not new upkeep: adding an indicator already requires
@@ -158,13 +155,10 @@ fn main() {
     };
 
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    for rel_dir in ["include", "examples"] {
-        let dest = Path::new(&manifest_dir)
-            .join(rel_dir)
-            .join("tulip_rs_ffi_counts.h");
-        fs::write(&dest, &out)
-            .unwrap_or_else(|e| panic!("failed to write {}: {}", dest.display(), e));
-    }
+    let dest = Path::new(&manifest_dir)
+        .join("include")
+        .join("tulip_rs_ffi_counts.h");
+    fs::write(&dest, &out).unwrap_or_else(|e| panic!("failed to write {}: {}", dest.display(), e));
 
     println!("cargo:rerun-if-changed=../tulip_rs/tulip_rs/src");
     println!("cargo:rerun-if-changed=build.rs");

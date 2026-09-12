@@ -337,7 +337,7 @@ pub(crate) unsafe fn optional_outputs_slice<'a>(
     ptr: *const bool,
     len: usize,
 ) -> Option<&'a [bool]> {
-    if ptr.is_null() {
+    if ptr.is_null() || len == 0 {
         None
     } else {
         Some(std::slice::from_raw_parts(ptr, len))

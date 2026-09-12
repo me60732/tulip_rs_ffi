@@ -72,14 +72,12 @@ Produces `target/release/libtulip_rs_ffi.{so,a}` (crate-type is
 unstable `portable_simd` feature internally.
 
 This also runs `build.rs`, which (re)generates `include/tulip_rs_ffi_counts.h`
-and `examples/tulip_rs_ffi_counts.h` -- one `#define <NAME>_INPUTS N` /
-`#define <NAME>_OPTIONS N` pair per indicator, read directly from the real
-`tulip_rs::indicators::<name>::{INPUTS, OPTIONS}` constants (via a
-`[build-dependencies]` copy of `tulip_rs`), so those counts can never drift
-from the core crate. `include/tulip_rs_ffi.h` pulls the former in automatically
-(`after_includes` in `cbindgen.toml`); the hand-written `examples/tulip_rs_ffi.h`
-includes the latter directly. Always run `cargo build` at least once before
-compiling anything against these headers.
+-- one `#define <NAME>_INPUTS N` / `#define <NAME>_OPTIONS N` pair per
+indicator, read directly from the real `tulip_rs::indicators::<name>::{INPUTS,
+OPTIONS}` constants (via a `[build-dependencies]` copy of `tulip_rs`), so
+those counts can never drift from the core crate. `include/tulip_rs_ffi.h`
+pulls it in automatically (`after_includes` in `cbindgen.toml`). Always run
+`cargo build` at least once before compiling anything against these headers.
 
 ## Verifying
 
@@ -103,16 +101,17 @@ script, so output can be sanity-compared across bindings. Each example:
 3. Feeds the remaining data through `<name>_batch()` to continue streaming.
 4. Verifies the partial+continued result matches a full recompute.
 
-`examples/tulip_rs_ffi.h` holds the shared hand-written prototypes (same
-declarations as the top of `verify.c`) so they aren't duplicated per example.
+Each example includes the single generated `include/tulip_rs_ffi.h` (compile
+with `-Iinclude`), so it always matches the current `libtulip_rs_ffi` build.
 
 ```bash
 cargo build --release
-cc -O2 -o adosc_example examples/adosc_example.c \
+cbindgen --config cbindgen.toml --output include/tulip_rs_ffi.h
+cc -O2 -o adosc_example examples/adosc_example.c -Iinclude \
    -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
-cc -O2 -o macd_example examples/macd_example.c \
+cc -O2 -o macd_example examples/macd_example.c -Iinclude \
    -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
-cc -O2 -o candlestick_example examples/candlestick_example.c \
+cc -O2 -o candlestick_example examples/candlestick_example.c -Iinclude \
    -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
 
 ./adosc_example
@@ -176,4 +175,7 @@ Memory ownership:
       (regenerate after any change to the `#[no_mangle] extern "C"` surface)
 - [x] Expose `info()`/`min_data()` metadata functions (`<name>_info` /
       `<name>_min_data`, mirroring the core `Info`/`min_data`) 
-- [ ] Benchmark harness (mirroring `tulip_rs_diplomat/bench/c`)
+- [x] Benchmark harness (`bench/`, mirroring the former `tulip_rs_diplomat/bench/c`;
+      all 94 non-candlestick indicators, with reference C_tulip/TA-Lib
+      comparisons built from the `bench/tulip_indicators` and `bench/ta_lib_src`
+      git submodules — see `bench/README.md`)

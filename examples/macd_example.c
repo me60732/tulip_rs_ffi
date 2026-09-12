@@ -8,7 +8,7 @@
 // constants (run `cargo build` at least once so that file exists/is current).
 //
 // Build:
-//   cc -O2 -o macd_example examples/macd_example.c \
+//   cc -O2 -o macd_example examples/macd_example.c -Iinclude \
 //       -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
 // Run:
 //   ./macd_example
@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "tulip_rs_ffi.h"
+#include "../include/tulip_rs_ffi.h"
 
 static const double close[] = {81.59, 81.06, 82.87, 83.00, 83.61, 83.15, 82.84, 83.99, 84.55, 84.36, 85.53, 86.54, 86.89, 87.77, 87.29};
 
@@ -67,7 +67,7 @@ int main(void) {
         bool optional_outputs[2] = {true, true}; // short_ema, long_ema
 
         CIndicatorResult r = macd_indicator(inputs, TOTAL, options, optional_outputs, 2);
-        if (r.error != C_OK) {
+        if (r.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "macd_indicator failed: error=%d\n", r.error);
             return 1;
         }
@@ -92,7 +92,7 @@ int main(void) {
         bool partial_optional_outputs[2] = {true, true};
         CIndicatorResult pr = macd_indicator(
             partial_inputs, PARTIAL, options, partial_optional_outputs, 2);
-        if (pr.error != C_OK) {
+        if (pr.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "macd_indicator (partial) failed: error=%d\n", pr.error);
             return 1;
         }
@@ -102,7 +102,7 @@ int main(void) {
 
         const double *rest_inputs[MACD_INPUTS] = {close + PARTIAL};
         CBatchResult br = macd_batch(state, rest_inputs, REST, NULL, 0);
-        if (br.error != C_OK) {
+        if (br.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "macd_batch failed: error=%d\n", br.error);
             return 1;
         }
@@ -156,7 +156,7 @@ int main(void) {
         bool optional_outputs[2] = {true, true};
 
         CSimdResult r = macd_simd_by_assets(simd_inputs, 4, TOTAL, options, optional_outputs, 2);
-        if (r.error != C_OK) {
+        if (r.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "macd_simd_by_assets failed: error=%d\n", r.error);
             return 1;
         }
@@ -173,7 +173,7 @@ int main(void) {
         for (size_t i = 0; i < r.num_results; i++) {
             CIndicatorResult ind = macd_indicator(
                 simd_inputs[i], TOTAL, options, optional_outputs, 2);
-            if (ind.error != C_OK) {
+            if (ind.error != C_INDICATOR_ERROR_OK) {
                 fprintf(stderr, "macd_indicator (asset %zu) failed: error=%d\n", i + 1, ind.error);
                 simd_ok = 0;
                 continue;
@@ -215,7 +215,7 @@ int main(void) {
 
         CSimdResult r = macd_simd_by_options(
             expanded_inputs, EXPANDED_LEN, simd_options, 4, NULL, 0);
-        if (r.error != C_OK) {
+        if (r.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "macd_simd_by_options failed: error=%d\n", r.error);
             return 1;
         }
@@ -231,7 +231,7 @@ int main(void) {
         for (size_t i = 0; i < r.num_results; i++) {
             CIndicatorResult ind = macd_indicator(
                 expanded_inputs, EXPANDED_LEN, simd_options[i], NULL, 0);
-            if (ind.error != C_OK) {
+            if (ind.error != C_INDICATOR_ERROR_OK) {
                 fprintf(stderr, "macd_indicator (option set %zu) failed: error=%d\n", i + 1, ind.error);
                 simd_ok = 0;
                 continue;

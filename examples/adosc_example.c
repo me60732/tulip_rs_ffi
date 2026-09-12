@@ -8,7 +8,7 @@
 // constants (run `cargo build` at least once so that file exists/is current).
 //
 // Build:
-//   cc -O2 -o adosc_example examples/adosc_example.c \
+//   cc -O2 -o adosc_example examples/adosc_example.c -Iinclude \
 //       -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
 // Run:
 //   ./adosc_example
@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "tulip_rs_ffi.h"
+#include "../include/tulip_rs_ffi.h"
 
 static const double high[]   = {82.15, 81.89, 83.03, 83.30, 83.85, 83.90, 83.33, 84.30, 84.84, 85.00, 85.90, 86.58, 87.87, 88.15, 87.60};
 static const double low[]    = {81.29, 80.64, 82.65, 82.70, 83.07, 82.65, 82.20, 83.35, 84.15, 84.11, 85.39, 86.04, 86.58, 87.32, 87.00};
@@ -70,7 +70,7 @@ int main(void) {
         bool optional_outputs[3] = {true, true, true}; // short_ema, long_ema, ad
 
         CIndicatorResult r = adosc_indicator(inputs, TOTAL, options, optional_outputs, 3);
-        if (r.error != C_OK) {
+        if (r.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "adosc_indicator failed: error=%d\n", r.error);
             return 1;
         }
@@ -93,7 +93,7 @@ int main(void) {
     {
         const double *partial_inputs[ADOSC_INPUTS] = {high, low, close, volume};
         CIndicatorResult pr = adosc_indicator(partial_inputs, PARTIAL, options, NULL, 0);
-        if (pr.error != C_OK) {
+        if (pr.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "adosc_indicator (partial) failed: error=%d\n", pr.error);
             return 1;
         }
@@ -104,7 +104,7 @@ int main(void) {
         const double *rest_inputs[ADOSC_INPUTS] = {
             high + PARTIAL, low + PARTIAL, close + PARTIAL, volume + PARTIAL};
         CBatchResult br = adosc_batch(state, rest_inputs, REST, NULL, 0);
-        if (br.error != C_OK) {
+        if (br.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "adosc_batch failed: error=%d\n", br.error);
             return 1;
         }
@@ -171,7 +171,7 @@ int main(void) {
         bool optional_outputs[3] = {true, true, true};
 
         CSimdResult r = adosc_simd_by_assets(simd_inputs, 4, TOTAL, options, optional_outputs, 3);
-        if (r.error != C_OK) {
+        if (r.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "adosc_simd_by_assets failed: error=%d\n", r.error);
             return 1;
         }
@@ -186,7 +186,7 @@ int main(void) {
         for (size_t i = 0; i < r.num_results; i++) {
             CIndicatorResult ind = adosc_indicator(
                 simd_inputs[i], TOTAL, options, optional_outputs, 3);
-            if (ind.error != C_OK) {
+            if (ind.error != C_INDICATOR_ERROR_OK) {
                 fprintf(stderr, "adosc_indicator (asset %zu) failed: error=%d\n", i + 1, ind.error);
                 simd_ok = 0;
                 continue;
@@ -235,7 +235,7 @@ int main(void) {
 
         CSimdResult r = adosc_simd_by_options(
             expanded_inputs, EXPANDED_LEN, simd_options, 4, NULL, 0);
-        if (r.error != C_OK) {
+        if (r.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "adosc_simd_by_options failed: error=%d\n", r.error);
             return 1;
         }
@@ -251,7 +251,7 @@ int main(void) {
         for (size_t i = 0; i < r.num_results; i++) {
             CIndicatorResult ind = adosc_indicator(
                 expanded_inputs, EXPANDED_LEN, simd_options[i], NULL, 0);
-            if (ind.error != C_OK) {
+            if (ind.error != C_INDICATOR_ERROR_OK) {
                 fprintf(stderr, "adosc_indicator (option set %zu) failed: error=%d\n", i + 1, ind.error);
                 simd_ok = 0;
                 continue;

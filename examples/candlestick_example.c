@@ -10,7 +10,7 @@
 // bars -- the dict the docs describe) is looked up by id.
 //
 // Build:
-//   cc -O2 -o candlestick_example examples/candlestick_example.c \
+//   cc -O2 -o candlestick_example examples/candlestick_example.c -Iinclude \
 //       -L target/release -ltulip_rs_ffi -Wl,-rpath,target/release
 // Run:
 //   ./candlestick_example
@@ -23,7 +23,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "tulip_rs_ffi.h"
+#include "../include/tulip_rs_ffi.h"
 
 // History bars, then three pronounced down candles to complete the
 // Three Black Crows pattern at the tail (same as the Rust/Python example).
@@ -114,7 +114,7 @@ int main(void) {
     // ---- Step 1: full calculation, no forecast filter (forecast = -1) ----
     printf("=== Candlestick: full calculation, forecast type None ===\n");
     CCandleStickResult full = candlestick_indicator(inputs, TOTAL, options, /*forecast=*/-1);
-    if (full.error != C_OK) {
+    if (full.error != C_INDICATOR_ERROR_OK) {
         fprintf(stderr, "candlestick_indicator failed: error=%d\n", full.error);
         return 1;
     }
@@ -125,8 +125,8 @@ int main(void) {
 
     // ---- Step 2: same data, filtered to BearishReversal patterns ----
     printf("\n=== Candlestick: full calculation, forecast type BearishReversal ===\n");
-    CCandleStickResult filtered = candlestick_indicator(inputs, TOTAL, options, C_FORECAST_BEARISH_REVERSAL);
-    if (filtered.error != C_OK) {
+    CCandleStickResult filtered = candlestick_indicator(inputs, TOTAL, options, C_FORECAST_TYPE_BEARISH_REVERSAL);
+    if (filtered.error != C_INDICATOR_ERROR_OK) {
         fprintf(stderr, "candlestick_indicator (filtered) failed: error=%d\n", filtered.error);
         return 1;
     }
@@ -142,8 +142,8 @@ int main(void) {
     printf("\n=== Candlestick: partial (%d bars) + batch continuation (%d bars) ===\n",
            PARTIAL, REST);
     CCandleStickResult partial =
-        candlestick_indicator(inputs, PARTIAL, options, C_FORECAST_BEARISH_REVERSAL);
-    if (partial.error != C_OK) {
+        candlestick_indicator(inputs, PARTIAL, options, C_FORECAST_TYPE_BEARISH_REVERSAL);
+    if (partial.error != C_INDICATOR_ERROR_OK) {
         fprintf(stderr, "candlestick_indicator (partial) failed: error=%d\n", partial.error);
         return 1;
     }
@@ -154,8 +154,8 @@ int main(void) {
     const double *rest_inputs[CANDLESTICK_INPUTS] = {open + PARTIAL, high + PARTIAL, low + PARTIAL,
                                     close + PARTIAL};
     CCandleStickBatchResult batch =
-        candlestick_batch(state, rest_inputs, REST, C_FORECAST_BEARISH_REVERSAL);
-    if (batch.error != C_OK) {
+        candlestick_batch(state, rest_inputs, REST, C_FORECAST_TYPE_BEARISH_REVERSAL);
+    if (batch.error != C_INDICATOR_ERROR_OK) {
         fprintf(stderr, "candlestick_batch failed: error=%d\n", batch.error);
         return 1;
     }
@@ -177,8 +177,8 @@ int main(void) {
     // recompute from Step 2. ----
     printf("\n=== Candlestick: one-bar-at-a-time streaming (BearishReversal) ===\n");
     CCandleStickResult seed =
-        candlestick_indicator(inputs, PARTIAL, options, C_FORECAST_BEARISH_REVERSAL);
-    if (seed.error != C_OK) {
+        candlestick_indicator(inputs, PARTIAL, options, C_FORECAST_TYPE_BEARISH_REVERSAL);
+    if (seed.error != C_INDICATOR_ERROR_OK) {
         fprintf(stderr, "candlestick_indicator (stream seed) failed: error=%d\n", seed.error);
         return 1;
     }
@@ -190,8 +190,8 @@ int main(void) {
         const double *one[CANDLESTICK_INPUTS] = {open + PARTIAL + i, high + PARTIAL + i,
                                 low + PARTIAL + i, close + PARTIAL + i};
         CCandleStickBatchResult br =
-            candlestick_batch(stream_state, one, 1, C_FORECAST_BEARISH_REVERSAL);
-        if (br.error != C_OK) {
+            candlestick_batch(stream_state, one, 1, C_FORECAST_TYPE_BEARISH_REVERSAL);
+        if (br.error != C_INDICATOR_ERROR_OK) {
             fprintf(stderr, "candlestick_batch (bar %zu) failed: error=%d\n", i, br.error);
             return 1;
         }
