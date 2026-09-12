@@ -5,12 +5,63 @@
 // stock and reused across all option sets for that stock.
 
 #include "tulip_rs_ffi.h"
+#include "../bench_common.h"
 
 typedef struct {
     const Stock *stock;
     const double *inputs_buf; // high ++ low ++ close, each stock->len long
     double period;
 } WillrCtx;
+
+// ---------------------------------------------------------------------------
+// SIMD benchmarks -- optional outputs always NULL (off).
+// *_simd_by_assets() runs one option set across 4 assets in a single call;
+// *_simd_by_options() runs 4 option sets on one asset in a single call.
+// ---------------------------------------------------------------------------
+
+typedef struct {
+    const Stock *stocks;   // by_assets: array of 4 stocks; by_options: single stock
+    size_t data_len;       // bars per asset (shared across the 4 for by_assets)
+    const double *opts;    // by_assets: the single shared option set
+    const double (*option_sets)[WILLR_OPTIONS]; // by_options: 4 option sets
+} WillrSimdCtx;
+
+static void bench_willr_simd_assets(void *ctx_) {
+    WillrSimdCtx *ctx = ctx_;
+    // Each asset has WILLR_INPUTS=3 input pointers (high, low, close)
+    const double *inputs_per_asset[4][WILLR_INPUTS] = {
+        {ctx->stocks[0].high, ctx->stocks[0].low, ctx->stocks[0].close},
+        {ctx->stocks[1].high, ctx->stocks[1].low, ctx->stocks[1].close},
+        {ctx->stocks[2].high, ctx->stocks[2].low, ctx->stocks[2].close},
+        {ctx->stocks[3].high, ctx->stocks[3].low, ctx->stocks[3].close},
+    };
+    // inputs is an array of num_assets pointers to input arrays
+    const double *inputs[4];
+    for (int i = 0; i < 4; i++) {
+        inputs[i] = (const double *)&inputs_per_asset[i][0];
+    }
+    struct CSimdResult r = willr_simd_by_assets((const double *const *const *)inputs, 4, ctx->data_len, ctx->opts, NULL, 0);
+    if (r.error != C_INDICATOR_ERROR_OK) {
+        fprintf(stderr, "[error] willr_simd_by_assets failed: %d\n", (int) r.error);
+        exit(1);
+    }
+    for (uintptr_t i = 0; i < r.num_results; i++) willr_state_free(r.states[i]);
+    tulip_ffi_simd_result_free(r);
+}
+
+static void bench_willr_simd_options(void *ctx_) {
+    WillrSimdCtx *ctx = ctx_;
+    const double *inputs[WILLR_INPUTS] = {ctx->stocks->high, ctx->stocks->low, ctx->stocks->close};
+    const double *opts[4] = {ctx->option_sets[0], ctx->option_sets[1],
+                             ctx->option_sets[2], ctx->option_sets[3]};
+    struct CSimdResult r = willr_simd_by_options(inputs, ctx->data_len, opts, 4, NULL, 0);
+    if (r.error != C_INDICATOR_ERROR_OK) {
+        fprintf(stderr, "[error] willr_simd_by_options failed: %d\n", (int) r.error);
+        exit(1);
+    }
+    for (uintptr_t i = 0; i < r.num_results; i++) willr_state_free(r.states[i]);
+    tulip_ffi_simd_result_free(r);
+}
 
 static void bench_willr(void *ctx_) {
     WillrCtx *ctx = ctx_;
@@ -94,5 +145,25 @@ static void run_willr(const Stock *stocks, int num_stocks, int number, int repea
         }
 
         free(inputs_buf);
+    }
+
+    // ---- SIMD runs (optional outputs off: NULL, 0) ----
+    if (num_stocks >= 4) {
+        size_t dlen = stocks[0].len;
+        for (int i = 1; i < 4; i++) if (stocks[i].len < dlen) dlen = stocks[i].len;
+
+        WillrSimdCtx sctx = { .stocks = stocks, .data_len = dlen };
+        for (int o = 0; o < 4; o++) {
+            sctx.opts = option_sets[o];
+            TimingResult t_sa = time_fn(bench_willr_simd_assets, &sctx, number, repeat, warmup);
+            log_and_print("willr", "tulip_rs_ffi_c_simd_by_assets", "All", option_sets[o], WILLR_OPTIONS, t_sa, (int) dlen);
+        }
+
+        for (int s = 0; s < num_stocks; s++) {
+            WillrSimdCtx octx = { .stocks = &stocks[s], .data_len = stocks[s].len, .option_sets = option_sets };
+            // One call times 4 option sets; first set logged as the representative key.
+            TimingResult t_so = time_fn(bench_willr_simd_options, &octx, number, repeat, warmup);
+            log_and_print("willr", "tulip_rs_ffi_c_simd_by_options", stocks[s].symbol, option_sets[0], WILLR_OPTIONS, t_so, (int) stocks[s].len);
+        }
     }
 }

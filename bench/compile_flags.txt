@@ -4,6 +4,7 @@
 -O3
 -Wall
 -Wextra
--I../include
--I./tulip_indicators
--I./vendor/ta-lib/usr/include/ta-lib
+-Wno-unused-function
+-I/home/mark/Documents/in_cloud/Development/tulip-rs-indicators/tulip_rs_ffi/include
+-I/home/mark/Documents/in_cloud/Development/tulip-rs-indicators/tulip_rs_ffi/bench/tulip_indicators
+-I/home/mark/Documents/in_cloud/Development/tulip-rs-indicators/tulip_rs_ffi/bench/vendor/ta-lib/usr/include/ta-lib
