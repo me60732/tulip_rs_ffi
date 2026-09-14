@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "../include/tulip_rs_ffi.h"
 
@@ -131,6 +132,121 @@ int main(void) {
 
         tulip_ffi_batch_result_free(br);
         adx_state_free(state);
+    }
+
+    printf("\n=== ADX: state persistence (serialize / deserialize / clone) ===\n");
+    {
+        // Same partial+batch flow as above, but the streaming state is now
+        // saved as an opaque byte blob (bincode) in between. This is what a
+        // binding layer writes to a DB/file: the bytes are meaningless to
+        // the caller, and only ever go back through tulip_state_deserialize().
+        const double *partial_inputs[ADX_INPUTS] = {high, low, close};
+        CIndicatorResult pr = adx_indicator(partial_inputs, PARTIAL, options, NULL, 0);
+        if (pr.error != C_INDICATOR_ERROR_OK) {
+            fprintf(stderr, "adx_indicator (persist demo) failed: error=%d\n", pr.error);
+            return 1;
+        }
+        void *state = pr.state;
+        tulip_ffi_result_free(pr);
+
+        // Serialize the live state (bincode format). The state handle is
+        // read-only here: it stays valid and usable afterwards.
+        CBytes blob = tulip_state_serialize(C_INDICATOR_ID_ADX, C_STATE_FORMAT_BINCODE, state);
+        if (blob.ptr == NULL || blob.len == 0) {
+            fprintf(stderr, "tulip_state_serialize failed\n");
+            return 1;
+        }
+        printf("  bincode blob: %zu bytes, magic=%.4s, schema=%u, name=%.32s\n",
+               blob.len, (const char *)blob.ptr, (unsigned)blob.ptr[4],
+               (const char *)blob.ptr + 6);
+
+        // Deserialize into a fresh, independent state handle -- indist-
+        // inguishable from what adx_indicator() handed out. Free it with
+        // adx_state_free() like any other state.
+        void *restored = tulip_state_deserialize(blob.ptr, blob.len);
+        if (restored == NULL) {
+            fprintf(stderr, "tulip_state_deserialize failed\n");
+            return 1;
+        }
+
+        // Continue the RESTORED state and verify it matches the full
+        // recompute tail-for-tail (same check the batch section does).
+        const double *rest_inputs[ADX_INPUTS] = {high + PARTIAL, low + PARTIAL, close + PARTIAL};
+        CBatchResult br = adx_batch(restored, rest_inputs, REST, NULL, 0);
+        if (br.error != C_INDICATOR_ERROR_OK) {
+            fprintf(stderr, "adx_batch (restored) failed: error=%d\n", br.error);
+            return 1;
+        }
+        print_row("adx (restored)", br.outputs[0], br.output_lens[0]);
+        size_t cont_len = br.output_lens[0];
+        size_t tail_start = full_adx_len - cont_len;
+        int persist_ok = allclose(full_adx + tail_start, br.outputs[0], cont_len);
+        printf(persist_ok
+                   ? "  MATCH: deserialized state continues identically\n"
+                   : "  MISMATCH detected!\n");
+        tulip_ffi_batch_result_free(br);
+        adx_state_free(restored);
+
+        // JSON format (1): human-readable for debugging only -- NOT valid
+        // to hand back to tulip_state_deserialize as if it were the
+        // persistence format? It IS (the format byte round-trips), but
+        // serde_json rejects non-finite f64s, so bincode is recommended.
+        CBytes json_blob = tulip_state_serialize(C_INDICATOR_ID_ADX, C_STATE_FORMAT_JSON, state);
+        if (json_blob.ptr == NULL) {
+            fprintf(stderr, "tulip_state_serialize (json) failed\n");
+            return 1;
+        }
+        printf("  json blob (%zu bytes, %zu after header): %.*s%s\n", json_blob.len,
+               json_blob.len - 38,
+               (int)(json_blob.len - 38 < 80 ? json_blob.len - 38 : 80),
+               (const char *)json_blob.ptr + 38,
+               json_blob.len - 38 > 80 ? "..." : "");
+        void *from_json = tulip_state_deserialize(json_blob.ptr, json_blob.len);
+        printf("  json roundtrip: %s\n", from_json ? "OK" : "FAILED");
+        if (from_json) adx_state_free(from_json);
+        tulip_ffi_bytes_free(json_blob);
+
+        // Clone: an in-process deep copy via Rust's Clone (no serde
+        // involved), same ownership rules as a deserialized state.
+        void *cloned = tulip_state_clone(C_INDICATOR_ID_ADX, state);
+        CBatchResult cb = adx_batch(cloned, rest_inputs, REST, NULL, 0);
+        CBatchResult ob = adx_batch(state, rest_inputs, REST, NULL, 0);
+        int clone_ok = cloned != NULL &&
+                       cb.error == C_INDICATOR_ERROR_OK &&
+                       ob.error == C_INDICATOR_ERROR_OK &&
+                       cb.output_lens[0] == ob.output_lens[0] &&
+                       allclose(cb.outputs[0], ob.outputs[0], cb.output_lens[0]);
+        printf(clone_ok
+                   ? "  MATCH: cloned state continues identically\n"
+                   : "  MISMATCH detected!\n");
+        tulip_ffi_batch_result_free(cb);
+        tulip_ffi_batch_result_free(ob);
+        adx_state_free(cloned);
+
+        // Misuse checks: the blob is self-describing (the TRFS header
+        // embeds the indicator NAME), so there is no id argument to get
+        // wrong on deserialize -- instead, corruption must be caught: a
+        // bad schema version byte or a corrupted name both yield NULL,
+        // never a wrong-typed handle. And an unknown id is rejected on
+        // the serialize side.
+        CBytes noblob = tulip_state_serialize(999, C_STATE_FORMAT_BINCODE, state);
+        uint8_t *corrupt = malloc(blob.len);
+        memcpy(corrupt, blob.ptr, blob.len);
+        corrupt[4] = 1; // claim the retired schema-1 layout
+        void *bad1 = tulip_state_deserialize(corrupt, blob.len);
+        corrupt[4] = 2; corrupt[6] = 'q'; // no indicator is named "qdx"
+        void *bad2 = tulip_state_deserialize(corrupt, blob.len);
+        printf("  misuse checks: unknown-serialize-id %s, bad-schema %s, bad-name %s\n",
+               noblob.ptr == NULL ? "rejected" : "ACCEPTED (BUG!)",
+               bad1 == NULL ? "rejected" : "ACCEPTED (BUG!)",
+               bad2 == NULL ? "rejected" : "ACCEPTED (BUG!)");
+        free(corrupt);
+        if (noblob.ptr || bad1 || bad2) persist_ok = 0;
+
+        tulip_ffi_bytes_free(blob); // exactly once; blob is now dead
+        adx_state_free(state);
+        printf(persist_ok ? "  ALL GOOD: persistence round-trips clean\n"
+                          : "  PERSISTENCE DEMO FAILED!\n");
     }
 
     printf("\n=== ADX: SIMD by assets (N=4) ===\n");

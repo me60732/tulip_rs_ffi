@@ -78,6 +78,7 @@ pub mod roofingfilter;
 pub mod rsi;
 pub mod sma;
 pub mod smaenvelope;
+pub mod state_registry;
 pub mod stddev;
 pub mod stoch;
 pub mod stochrsi;
@@ -107,6 +108,8 @@ pub mod wma;
 pub mod zlema;
 
 pub use common::{
-    tulip_ffi_batch_result_free, tulip_ffi_result_free, tulip_ffi_simd_result_free, CBatchResult,
-    CIndicatorError, CIndicatorResult, CSimdResult,
+    tulip_ffi_batch_result_free, tulip_ffi_bytes_free, tulip_ffi_result_free,
+    tulip_ffi_simd_result_free, CBatchResult, CBytes, CIndicatorError, CIndicatorResult,
+    CSimdResult,
 };
+pub use state_registry::{tulip_state_clone, tulip_state_deserialize, tulip_state_serialize};

@@ -11,6 +11,20 @@
 //!   - `*_state_free()` (defined per-indicator, since dropping requires the
 //!     concrete Rust type) releases the boxed state returned by
 //!     `*_indicator()` whenever the caller is done streaming.
+//!
+//! State persistence:
+//!   - `tulip_state_serialize(indicator, format, state)` returns an opaque
+//!     byte blob representing the current state of a streaming indicator.
+//!     The caller owns the returned `CBytes` and must free it with
+//!     `tulip_ffi_bytes_free`. State is read-only (not consumed).
+//!   - `tulip_state_deserialize(bytes, len)` reconstructs a fresh state
+//!     handle from a blob produced by `tulip_state_serialize`. The blob is
+//!     self-describing (it embeds the indicator name), so there is no
+//!     indicator argument to mismatch. The returned `*mut c_void` is
+//!     indistinguishable from a fresh `<name>_indicator()` result: use with
+//!     `<name>_batch()` and release with `<name>_state_free()`.
+//!   - Both functions support multiple wire formats (bincode, JSON). JSON
+//!     fails on non-finite f64s; bincode is recommended for persistence.
 
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
@@ -34,6 +48,55 @@ pub struct CStringArray {
 // creation, so sharing/transferring references across threads is sound.
 unsafe impl Sync for CStringArray {}
 unsafe impl Send for CStringArray {}
+
+/// A C-ABI byte buffer owned by the caller after being returned from Rust.
+/// `ptr` is null on error (or when `len == 0` is returned — no: on error only).
+/// Must be released exactly once with `tulip_ffi_bytes_free`.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct CBytes {
+    pub ptr: *mut u8,
+    pub len: usize,
+}
+
+impl CBytes {
+    /// Returns a null CBytes (ptr null, len 0).
+    pub(crate) fn null() -> Self {
+        CBytes {
+            ptr: std::ptr::null_mut(),
+            len: 0,
+        }
+    }
+
+    /// Leaks `v` into a raw pointer and length. Capture len BEFORE into_raw.
+    pub(crate) fn from_vec(v: Vec<u8>) -> Self {
+        let len = v.len();
+        let ptr = Box::into_raw(v.into_boxed_slice()) as *mut u8;
+        CBytes { ptr, len }
+    }
+}
+
+// SAFETY: `CBytes` is just a raw pointer + length pair. The pointer points at
+// leaked memory owned by the caller; sharing/transferring across threads is
+// sound because the data itself is never mutated after creation and the
+// ownership contract (free exactly once) is enforced by convention.
+unsafe impl Sync for CBytes {}
+unsafe impl Send for CBytes {}
+
+/// Frees a `CBytes` returned from `tulip_state_serialize`. Must be called
+/// exactly once. Safe to call with null ptr (e.g. after an error).
+///
+/// # Safety
+/// `bytes` must be exactly what `tulip_state_serialize` returned, and must
+/// not have been freed already.
+#[no_mangle]
+pub unsafe extern "C" fn tulip_ffi_bytes_free(bytes: CBytes) {
+    if !bytes.ptr.is_null() {
+        drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
+            bytes.ptr, bytes.len,
+        )));
+    }
+}
 
 /// C-ABI mirror of `tulip_rs::types::IndicatorType`.
 #[repr(C)]

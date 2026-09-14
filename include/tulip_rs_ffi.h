@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "tulip_rs_ffi_counts.h"
+#include "tulip_rs_ffi_state_ids.h"
 
 /**
  * C-ABI mirror of `tulip_rs::types::IndicatorType`.
@@ -65,6 +66,34 @@ enum CForecastType
 typedef enum CForecastType CForecastType;
 #else
 typedef int32_t CForecastType;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+/**
+ * Wire format selector for `tulip_state_serialize` (and the `format` byte
+ * embedded in the blob header).
+ */
+enum CStateFormat
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  /**
+   * Compact binary encoding; recommended for persistence. Handles all
+   * f64 values including NaN/Inf.
+   */
+  C_STATE_FORMAT_BINCODE = 0,
+  /**
+   * Human-readable JSON via serde_json, for debugging/inspection only:
+   * fails (null return) on non-finite f64s.
+   */
+  C_STATE_FORMAT_JSON = 1,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum CStateFormat CStateFormat;
+#else
+typedef uint32_t CStateFormat;
 #endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
@@ -226,6 +255,16 @@ typedef struct CCandleStickBatchResult {
   uint32_t *bar_offsets;
   uint32_t *pattern_ids;
 } CCandleStickBatchResult;
+
+/**
+ * A C-ABI byte buffer owned by the caller after being returned from Rust.
+ * `ptr` is null on error (or when `len == 0` is returned — no: on error only).
+ * Must be released exactly once with `tulip_ffi_bytes_free`.
+ */
+typedef struct CBytes {
+  uint8_t *ptr;
+  uintptr_t len;
+} CBytes;
 
 #ifdef __cplusplus
 extern "C" {
@@ -2574,6 +2613,16 @@ struct CSimdResult cmo_simd_by_options(const double *const *inputs,
                                        uintptr_t num_option_sets,
                                        const bool *optional_outputs,
                                        uintptr_t numoptional);
+
+/**
+ * Frees a `CBytes` returned from `tulip_state_serialize`. Must be called
+ * exactly once. Safe to call with null ptr (e.g. after an error).
+ *
+ * # Safety
+ * `bytes` must be exactly what `tulip_state_serialize` returned, and must
+ * not have been freed already.
+ */
+void tulip_ffi_bytes_free(struct CBytes bytes);
 
 /**
  * Frees the output buffers owned by a `CIndicatorResult`. Does **not**
@@ -8853,6 +8902,62 @@ struct CSimdResult smaenvelope_simd_by_options(const double *const *inputs,
                                                uintptr_t num_option_sets,
                                                const bool *optional_outputs,
                                                uintptr_t numoptional);
+
+/**
+ * Serialize a boxed indicator state into an opaque byte blob.
+ * `state` is the `*mut c_void` handle from `<name>_indicator()` (READ ONLY
+ * -- the state is not consumed). `indicator` must be the matching
+ * `C_INDICATOR_ID_*` constant for that state's type. Returns
+ * `CBytes { ptr: null }` on error. Free the blob with
+ * `tulip_ffi_bytes_free`.
+ *
+ * The blob is self-describing (it embeds the indicator name); pass it
+ * straight to `tulip_state_deserialize` with no further arguments.
+ *
+ * `format`: a `CStateFormat` discriminant (0 = Bincode, 1 = Json).
+ *
+ * # Safety
+ * `state` must be null, or a valid pointer previously returned by an
+ * indicator's `<name>_indicator()` function (or `tulip_state_deserialize`/
+ * `tulip_state_clone`) that matches `indicator` and has not been passed to
+ * `<name>_state_free()` yet. The state is read-only (not consumed).
+ */
+struct CBytes tulip_state_serialize(uint32_t indicator, uint32_t format, const void *state);
+
+/**
+ * Reconstruct a boxed state from a blob produced by `tulip_state_serialize`.
+ * The blob's header identifies the indicator (by name) and the encoding
+ * format -- there is no indicator argument to mismatch. The returned
+ * `*mut c_void` is indistinguishable from a fresh `<name>_indicator()`
+ * state handle: use with `<name>_batch()` and release with
+ * `<name>_state_free()`.
+ *
+ * Returns null on error: null input, truncated data, bad magic, unknown
+ * schema version, unknown format byte, unknown indicator name, or a
+ * payload that fails to decode. Malformed input can never cause UB or a
+ * panic -- only a null return.
+ *
+ * # Safety
+ * `bytes` must be null, or point to `len` readable bytes. Memory safety
+ * holds for *any* contents; the validity requirement is only that the
+ * pointer/len pair is dereferenceable.
+ */
+void *tulip_state_deserialize(const uint8_t *bytes, uintptr_t len);
+
+/**
+ * Clone a boxed indicator state directly via Rust's `Clone` (core state
+ * types all derive it -- no serde round-trip involved). Returns null on
+ * error (null state, unknown indicator).
+ * The cloned state is independent: use with `<name>_batch()` and release
+ * with `<name>_state_free()`.
+ *
+ * # Safety
+ * `state` must be null, or a valid pointer previously returned by an
+ * indicator's `<name>_indicator()` function (or `tulip_state_deserialize`/
+ * `tulip_state_clone`) that matches `indicator` and has not been passed to
+ * `<name>_state_free()` yet.
+ */
+void *tulip_state_clone(uint32_t indicator, const void *state);
 
 /**
  * Returns static metadata about the `stddev` indicator: its name, input

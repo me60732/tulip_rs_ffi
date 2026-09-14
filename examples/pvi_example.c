@@ -125,6 +125,37 @@ int main(void) {
         pvi_state_free(state);
     }
 
+    printf("\n=== PVI: state persistence (serialize / deserialize) ===\n");
+    {
+        const double *pinputs[PVI_INPUTS] = {close, volume};
+        CIndicatorResult pr = pvi_indicator(pinputs, PARTIAL, options, NULL, 0);
+        if (pr.error != C_INDICATOR_ERROR_OK) { fprintf(stderr, "pvi_indicator failed\n"); return 1; }
+        void *st = pr.state;
+        tulip_ffi_result_free(pr);
+
+        CBytes blob = tulip_state_serialize(C_INDICATOR_ID_PVI, C_STATE_FORMAT_BINCODE, st);
+        if (blob.ptr == NULL) { fprintf(stderr, "serialize failed\n"); return 1; }
+        printf("  blob: %zu bytes, magic=%.4s, name=%.32s\n",
+               blob.len, (const char *)blob.ptr, (const char *)blob.ptr + 6);
+
+        void *rs = tulip_state_deserialize(blob.ptr, blob.len);
+        tulip_ffi_bytes_free(blob);
+        if (rs == NULL) { fprintf(stderr, "deserialize failed\n"); return 1; }
+
+        const double *rinputs[PVI_INPUTS] = {close + PARTIAL, volume + PARTIAL};
+        CBatchResult a = pvi_batch(st, rinputs, REST, NULL, 0);
+        CBatchResult b = pvi_batch(rs, rinputs, REST, NULL, 0);
+        int persist_ok = a.error == C_INDICATOR_ERROR_OK && b.error == C_INDICATOR_ERROR_OK &&
+                         a.output_lens[0] == b.output_lens[0] &&
+                         allclose(a.outputs[0], b.outputs[0], a.output_lens[0]);
+        printf(persist_ok ? "  MATCH: deserialized state continues identically\n"
+                          : "  MISMATCH detected!\n");
+        tulip_ffi_batch_result_free(a);
+        tulip_ffi_batch_result_free(b);
+        pvi_state_free(st);
+        pvi_state_free(rs);
+    }
+
     printf("\n=== PVI: SIMD by assets (N=4) ===\n");
     {
         // Asset 1: original data.

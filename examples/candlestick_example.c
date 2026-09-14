@@ -221,6 +221,34 @@ int main(void) {
     candlestick_result_free(full);
     candlestick_result_free(filtered);
     candlestick_state_free(state);
+
+    printf("\n=== CANDLESTICK: state persistence (serialize / deserialize) ===\n");
+    {
+        const double *partial_inputs[CANDLESTICK_INPUTS] = {open + PARTIAL, high + PARTIAL, low + PARTIAL,
+                                    close + PARTIAL};
+        CCandleStickResult pr = candlestick_indicator(partial_inputs, PARTIAL, options, C_FORECAST_TYPE_BEARISH_REVERSAL);
+        if (pr.error != C_INDICATOR_ERROR_OK) { fprintf(stderr, "candlestick_indicator failed\n"); return 1; }
+        void *st = pr.state;
+        candlestick_result_free(pr);
+
+        CBytes blob = tulip_state_serialize(C_INDICATOR_ID_CANDLESTICK, C_STATE_FORMAT_BINCODE, st);
+        if (blob.ptr == NULL) { fprintf(stderr, "serialize failed\n"); return 1; }
+        printf("  roundtrip: OK\n");
+
+        void *rs = tulip_state_deserialize(blob.ptr, blob.len);
+        tulip_ffi_bytes_free(blob);
+        if (rs == NULL) { fprintf(stderr, "deserialize failed\n"); return 1; }
+
+        const double *rinputs[CANDLESTICK_INPUTS] = {open + PARTIAL, high + PARTIAL, low + PARTIAL,
+                                    close + PARTIAL};
+        CCandleStickBatchResult br = candlestick_batch(rs, rinputs, REST, C_FORECAST_TYPE_BEARISH_REVERSAL);
+        if (br.error != C_INDICATOR_ERROR_OK) { fprintf(stderr, "candlestick_batch failed\n"); return 1; }
+        printf("  batch continuation: OK\n");
+        
+        candlestick_state_free(st);
+        candlestick_state_free(rs);
+    }
+
     candlestick_state_free(stream_state);
 
     return (ok && stream_ok) ? 0 : 1;

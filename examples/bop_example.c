@@ -133,6 +133,37 @@ int main(void) {
         tulip_ffi_batch_result_free(br);
         bop_state_free(state);
     }
+    printf("\n=== BOP: state persistence (serialize / deserialize) ===\n");
+    {
+        const double *pinputs[BOP_INPUTS] = {open, high, low, close};
+        CIndicatorResult pr = bop_indicator(pinputs, PARTIAL, NULL, NULL, 0);
+        if (pr.error != C_INDICATOR_ERROR_OK) { fprintf(stderr, "bop_indicator failed\n"); return 1; }
+        void *st = pr.state;
+        tulip_ffi_result_free(pr);
+
+        CBytes blob = tulip_state_serialize(C_INDICATOR_ID_BOP, C_STATE_FORMAT_BINCODE, st);
+        if (blob.ptr == NULL) { fprintf(stderr, "serialize failed\n"); return 1; }
+        printf("  blob: %zu bytes, magic=%.4s, name=%.32s\n",
+               blob.len, (const char *)blob.ptr, (const char *)blob.ptr + 6);
+
+        void *rs = tulip_state_deserialize(blob.ptr, blob.len);
+        tulip_ffi_bytes_free(blob);
+        if (rs == NULL) { fprintf(stderr, "deserialize failed\n"); return 1; }
+
+        const double *rinputs[BOP_INPUTS] = {open + PARTIAL, high + PARTIAL, low + PARTIAL, close + PARTIAL};
+        CBatchResult a = bop_batch(st, rinputs, REST, NULL, 0);
+        CBatchResult b = bop_batch(rs, rinputs, REST, NULL, 0);
+        int persist_ok = a.error == C_INDICATOR_ERROR_OK && b.error == C_INDICATOR_ERROR_OK &&
+                         a.output_lens[0] == b.output_lens[0] &&
+                         allclose(a.outputs[0], b.outputs[0], a.output_lens[0]);
+        printf(persist_ok ? "  MATCH: deserialized state continues identically\n"
+                          : "  MISMATCH detected!\n");
+        tulip_ffi_batch_result_free(a);
+        tulip_ffi_batch_result_free(b);
+        bop_state_free(st);
+        bop_state_free(rs);
+    }
+
 
     printf("\n=== BOP: SIMD by assets (N=4) ===\n");
     {

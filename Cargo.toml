@@ -1,6 +1,6 @@
 [package]
 name = "tulip_rs_ffi"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Hand-rolled extern \"C\" FFI wrapper around the tulip_rs core indicator library"
 license = "MIT"
@@ -9,9 +9,14 @@ license = "MIT"
 crate-type = ["cdylib", "staticlib", "lib"]
 
 [dependencies]
-# For local co-development against the core workspace, swap in:
-# tulip_rs = { path = "../tulip_rs/tulip_rs", default-features = false, features = ["simd_assets", "simd_options"] }
-tulip_rs = { version = "0.2.7", default-features = false, features = ["simd_assets", "simd_options"] }
+# For local co-development against the core workspace, swap back to:
+tulip_rs = { version = "0.2.8", default-features = false, features = ["simd_assets", "simd_options"] }
+#tulip_rs = { path = "../tulip_rs/tulip_rs", default-features = false, features = ["simd_assets", "simd_options"] }
+
+# Serialization/deserialization for indicator state (opaque bytes for GC bindings)
+serde = { version = "1", features = ["derive"] }
+bincode = "1.3"
+serde_json = "1"
 
 # Used only by build.rs to read the real `tulip_rs::indicators::<name>::{INPUTS,
 # OPTIONS} constants at build time and emit them as C #defines in
@@ -19,8 +24,8 @@ tulip_rs = { version = "0.2.7", default-features = false, features = ["simd_asse
 # from ever drifting out of sync with the core crate (see build.rs for
 # details).
 [build-dependencies]
-tulip_rs = { version = "0.2.7", default-features = true }
-#tulip_rs = { path = "../tulip_rs/tulip_rs", default-features = false, features = ["simd_assets", "simd_options"] }
+tulip_rs = { version = "0.2.8", default-features = true }
+#tulip_rs = { path = "../tulip_rs/tulip_rs", default-features = true }
 
 # Match the release profile of the tulip_rs workspace (../tulip_rs/Cargo.toml)
 # so the cdylib -- and the core crate compiled into it -- gets the same fat

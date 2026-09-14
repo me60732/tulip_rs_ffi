@@ -202,5 +202,36 @@ int main(void) {
     // Note: OBV has OPTIONS=0, so there is no SIMD by-options section.
     // The header comment above notes this limitation.
 
+    printf("\n=== OBV: state persistence (serialize / deserialize) ===\n");
+    {
+        const double *pinputs[OBV_INPUTS] = {close, volume};
+        CIndicatorResult pr = obv_indicator(pinputs, PARTIAL, options, NULL, 0);
+        if (pr.error != C_INDICATOR_ERROR_OK) { fprintf(stderr, "obv_indicator failed\n"); return 1; }
+        void *st = pr.state;
+        tulip_ffi_result_free(pr);
+
+        CBytes blob = tulip_state_serialize(C_INDICATOR_ID_OBV, C_STATE_FORMAT_BINCODE, st);
+        if (blob.ptr == NULL) { fprintf(stderr, "serialize failed\n"); return 1; }
+        printf("  blob: %zu bytes, magic=%.4s, name=%.32s\n",
+               blob.len, (const char *)blob.ptr, (const char *)blob.ptr + 6);
+
+        void *rs = tulip_state_deserialize(blob.ptr, blob.len);
+        tulip_ffi_bytes_free(blob);
+        if (rs == NULL) { fprintf(stderr, "deserialize failed\n"); return 1; }
+
+        const double *rinputs[OBV_INPUTS] = {close + PARTIAL, volume + PARTIAL};
+        CBatchResult a = obv_batch(st, rinputs, REST, NULL, 0);
+        CBatchResult b = obv_batch(rs, rinputs, REST, NULL, 0);
+        int persist_ok = a.error == C_INDICATOR_ERROR_OK && b.error == C_INDICATOR_ERROR_OK &&
+                         a.output_lens[0] == b.output_lens[0] &&
+                         allclose(a.outputs[0], b.outputs[0], a.output_lens[0]);
+        printf(persist_ok ? "  MATCH: deserialized state continues identically\n"
+                          : "  MISMATCH detected!\n");
+        tulip_ffi_batch_result_free(a);
+        tulip_ffi_batch_result_free(b);
+        obv_state_free(st);
+        obv_state_free(rs);
+    }
+
     return 0;
 }
