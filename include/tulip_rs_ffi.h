@@ -2421,6 +2421,25 @@ struct CBatchResult chandelierexit_batch(void *state,
 void chandelierexit_state_free(void *state);
 
 /**
+ * Returns static metadata about the `chandelierexit` indicator: its name, input
+ * names, option names, and (mandatory/optional) output names, mirroring
+ * `ChandelierExit::INFO`.
+ *
+ * The returned strings are leaked, process-lifetime C strings -- read them,
+ * don't free them.
+ */
+struct CIndicatorInfo chandelierexit_info(void);
+
+/**
+ * Returns the minimum number of bars `chandelierexit` needs to produce any output at
+ * all, given `options`.
+ *
+ * # Safety
+ * `options` must point to `OPTIONS` (2) valid `f64`s.
+ */
+uintptr_t chandelierexit_min_data(const double *options);
+
+/**
  * Computes Chandelier Exit for `N` assets simultaneously (SIMD), sharing a single
  * options array. `num_assets` must be 2, 4, 8, or 16 -- anything else
  * returns `InvalidInputs`.
@@ -2712,6 +2731,25 @@ struct CBatchResult cvi_batch(void *state,
  * after this call.
  */
 void cvi_state_free(void *state);
+
+/**
+ * Returns static metadata about the `cvi` indicator: its name, input
+ * names, option names, and (mandatory/optional) output names, mirroring
+ * `Cvi::INFO`.
+ *
+ * The returned strings are leaked, process-lifetime C strings -- read them,
+ * don't free them.
+ */
+struct CIndicatorInfo cvi_info(void);
+
+/**
+ * Returns the minimum number of bars `cvi` needs to produce any output at
+ * all, given `options`.
+ *
+ * # Safety
+ * `options` must point to `OPTIONS` (1) valid `f64`s.
+ */
+uintptr_t cvi_min_data(const double *options);
 
 /**
  * Computes CVI for `N` assets simultaneously (SIMD), sharing a single

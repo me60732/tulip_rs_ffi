@@ -32,9 +32,9 @@ use tulip_rs::indicators::chandelierexit::{
 use tulip_rs::types::IndicatorError;
 
 use crate::common::{
-    optional_outputs_slice, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
-    read_simd_assets_inputs, read_simd_options, CBatchResult, CIndicatorError, CIndicatorResult,
-    CSimdResult,
+    optional_outputs_slice, pack_info, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
+    read_simd_assets_inputs, read_simd_options, CBatchResult, CIndicatorError, CIndicatorInfo,
+    CIndicatorResult, CSimdResult,
 };
 
 /// Opaque state handle returned by `chandelierexit_indicator()` and consumed by
@@ -143,6 +143,28 @@ pub unsafe extern "C" fn chandelierexit_state_free(state: *mut c_void) {
     if !state.is_null() {
         drop(Box::from_raw(state as *mut ChandelierExitStateHandle));
     }
+}
+
+/// Returns static metadata about the `chandelierexit` indicator: its name, input
+/// names, option names, and (mandatory/optional) output names, mirroring
+/// `ChandelierExit::INFO`.
+///
+/// The returned strings are leaked, process-lifetime C strings -- read them,
+/// don't free them.
+#[no_mangle]
+pub extern "C" fn chandelierexit_info() -> CIndicatorInfo {
+    pack_info(&ChandelierExit::INFO)
+}
+
+/// Returns the minimum number of bars `chandelierexit` needs to produce any output at
+/// all, given `options`.
+///
+/// # Safety
+/// `options` must point to `OPTIONS` (2) valid `f64`s.
+#[no_mangle]
+pub unsafe extern "C" fn chandelierexit_min_data(options: *const f64) -> usize {
+    let options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
+    ChandelierExit::min_data(&options)
 }
 
 /// Computes Chandelier Exit for `N` assets simultaneously (SIMD), sharing a single

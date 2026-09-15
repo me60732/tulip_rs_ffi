@@ -30,9 +30,9 @@ use tulip_rs::indicators::cvi::{Cvi, IndicatorState as CviState, INPUTS, OPTIONS
 use tulip_rs::types::IndicatorError;
 
 use crate::common::{
-    optional_outputs_slice, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
-    read_simd_assets_inputs, read_simd_options, CBatchResult, CIndicatorError, CIndicatorResult,
-    CSimdResult,
+    optional_outputs_slice, pack_info, pack_outputs, pack_simd_outputs, pack_states, read_inputs,
+    read_simd_assets_inputs, read_simd_options, CBatchResult, CIndicatorError, CIndicatorInfo,
+    CIndicatorResult, CSimdResult,
 };
 
 /// Opaque state handle returned by `cvi_indicator()` and consumed by
@@ -139,6 +139,28 @@ pub unsafe extern "C" fn cvi_state_free(state: *mut c_void) {
     if !state.is_null() {
         drop(Box::from_raw(state as *mut CviStateHandle));
     }
+}
+
+/// Returns static metadata about the `cvi` indicator: its name, input
+/// names, option names, and (mandatory/optional) output names, mirroring
+/// `Cvi::INFO`.
+///
+/// The returned strings are leaked, process-lifetime C strings -- read them,
+/// don't free them.
+#[no_mangle]
+pub extern "C" fn cvi_info() -> CIndicatorInfo {
+    pack_info(&Cvi::INFO)
+}
+
+/// Returns the minimum number of bars `cvi` needs to produce any output at
+/// all, given `options`.
+///
+/// # Safety
+/// `options` must point to `OPTIONS` (1) valid `f64`s.
+#[no_mangle]
+pub unsafe extern "C" fn cvi_min_data(options: *const f64) -> usize {
+    let options: [f64; OPTIONS] = *(options as *const [f64; OPTIONS]);
+    Cvi::min_data(&options)
 }
 
 /// Computes CVI for `N` assets simultaneously (SIMD), sharing a single

@@ -1,0 +1,102 @@
+# Builds portable cdylibs for the language bindings to download (no Rust
+# needed on the user side). CRITICAL: CI must NOT inherit the repo's
+# `-C target-cpu=native` (see .cargo/config.toml) — the runner's CPU is not
+# the user's CPU and the result would SIGILL at runtime. The RUSTFLAGS env
+# var overrides build.rustflags (cargo uses the env var when it is set).
+# Safe baselines:
+#   x86-64-v3  -> AVX2-class CPUs (Intel Haswell / AMD Excavator, 2013+)
+#   generic    -> aarch64 baseline (NEON/ASIMD is mandatory since ARMv8)
+# Users who want full native speed run the bindings' source-build bootstrap.
+name: release-binaries
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            runs_on: ubuntu-24.04
+            rustflags: "-C target-cpu=x86-64-v3"
+            cargo_target: x86_64-unknown-linux-gnu
+            lib: libtulip_rs_ffi.so
+          - name: linux-arm64
+            runs_on: ubuntu-24.04-arm
+            rustflags: "-C target-cpu=generic"
+            cargo_target: aarch64-unknown-linux-gnu
+            lib: libtulip_rs_ffi.so
+          # Intel mac binaries are cross-compiled from the arm64 runner —
+          # GitHub is retiring Intel macOS runners, and the macOS SDK is
+          # universal, so --target x86_64-apple-darwin just works there.
+          - name: darwin-amd64
+            runs_on: macos-latest
+            rustflags: "-C target-cpu=x86-64-v3"
+            cargo_target: x86_64-apple-darwin
+            lib: libtulip_rs_ffi.dylib
+          - name: darwin-arm64
+            runs_on: macos-latest
+            rustflags: "-C target-cpu=generic"
+            cargo_target: aarch64-apple-darwin
+            lib: libtulip_rs_ffi.dylib
+          # Windows ships the STATICLIB (libtulip_rs_ffi.a), not the DLL:
+          # cgo on Windows is mingw-w64 GCC, ld links the .a, and there is
+          # no runtime DLL to place next to the exe (PE has no rpath).
+          # Cross-compiled from Linux — no Windows runner needed. The
+          # staticlib is large, so strip debug info and ship tar.gz'd.
+          # windows-arm64 is intentionally absent: no GH runners, and MSVC
+          # toolchain interop with cgo is not worth it; use --source there.
+          - name: windows-amd64
+            runs_on: ubuntu-24.04
+            rustflags: "-C target-cpu=x86-64-v3"
+            cargo_target: x86_64-pc-windows-gnu
+            lib: libtulip_rs_ffi.a
+            strip_bin: x86_64-w64-mingw32-strip
+
+    name: prebuilt ${{ matrix.name }}
+    runs-on: ${{ matrix.runs_on }}
+    env:
+      RUSTFLAGS: ${{ matrix.rustflags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # rust-toolchain.toml pins nightly; rustup fetches it automatically.
+
+      - name: Install cross toolchain (windows-gnu)
+        if: matrix.cargo_target == 'x86_64-pc-windows-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+
+      - name: Build release cdylib
+        env:
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
+        run: |
+          rustup target add "${{ matrix.cargo_target }}"
+          cargo build --release --target "${{ matrix.cargo_target }}"
+
+      - name: Package
+        run: |
+          mkdir -p pkg/lib pkg/include
+          cp "target/${{ matrix.cargo_target }}/release/${{ matrix.lib }}" pkg/lib/
+          cp include/*.h pkg/include/
+          STRIP="${{ matrix.strip_bin || 'strip' }}"
+          "$STRIP" -S pkg/lib/* 2>/dev/null || "$STRIP" pkg/lib/* 2>/dev/null || true
+          tar czf "tulip_rs_ffi-${{ matrix.name }}.tar.gz" -C pkg .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tulip_rs_ffi-${{ matrix.name }}
+          path: tulip_rs_ffi-${{ matrix.name }}.tar.gz
+
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tulip_rs_ffi-${{ matrix.name }}.tar.gz

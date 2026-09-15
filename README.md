@@ -93,6 +93,25 @@ Requires **nightly** (`rust-toolchain.toml`: pinned `nightly-2026-08-31`) due to
 
 ---
 
+## Prebuilt release binaries
+
+`.github/workflows/release.yml`: on every `v*` tag it builds the cdylib for
+`linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`, and a Windows
+static lib for `windows-amd64`, attaching
+`tulip_rs_ffi-<os>-<arch>.tar.gz` (`lib/` + `include/`) to the GitHub release.
+Windows ships `libtulip_rs_ffi.a` (not the DLL): cgo there is mingw-w64 GCC
+and PE has no rpath, so static linking avoids DLL-next-to-exe games.
+
+CI **must not** inherit `target-cpu=native` — the runner's CPU is not the
+user's, and the artifact would `SIGILL` at runtime. The workflow therefore
+overrides `RUSTFLAGS` to portable baselines: `-C target-cpu=x86-64-v3` on
+x86_64 (AVX2-class, 2013+) and `-C target-cpu=generic` on aarch64 (NEON is
+mandatory since ARMv8). Language bindings expose both consumption paths — a
+portable prebuilt download and a native source build (see each binding's
+bootstrap docs).
+
+---
+
 ## Headers
 
 Two headers live in `include/`:
