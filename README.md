@@ -1,5 +1,10 @@
 # tulip_rs_ffi
 
+[![Crates.io version](https://img.shields.io/crates/v/tulip_rs_ffi.svg)](https://crates.io/crates/tulip_rs_ffi)
+[![Downloads](https://img.shields.io/crates/d/tulip_rs_ffi.svg)](https://crates.io/crates/tulip_rs_ffi)
+[![License: MIT](https://img.shields.io/crates/l/tulip_rs_ffi.svg)](LICENSE)
+[![CI status](https://github.com/me60732/tulip_rs_ffi/actions/workflows/release.yml/badge.svg)](https://github.com/me60732/tulip_rs_ffi/actions/workflows/release.yml)
+
 A hand-rolled `extern "C"` FFI layer over [`tulip_rs`](https://github.com/me60732/tulip_rs) (crates.io: `tulip_rs`), exposing 95 indicator modules — 94 technical indicators plus 77+ candlestick patterns — via raw-pointer, Tulip-Indicators-style calling conventions.
 
 No wrapper library or language runtime required — just `#[no_mangle] extern "C"` functions consumable from C, C++, or any language with a C ABI.
