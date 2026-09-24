@@ -46,18 +46,22 @@ jobs:
             rustflags: "-C target-cpu=generic"
             cargo_target: aarch64-apple-darwin
             lib: libtulip_rs_ffi.dylib
-          # Windows ships the STATICLIB (libtulip_rs_ffi.a), not the DLL:
-          # cgo on Windows is mingw-w64 GCC, ld links the .a, and there is
-          # no runtime DLL to place next to the exe (PE has no rpath).
-          # Cross-compiled from Linux — no Windows runner needed. The
-          # staticlib is large, so strip debug info and ship tar.gz'd.
+          # Windows ships TWO artifacts in one tarball: the STATICLIB
+          # (libtulip_rs_ffi.a) for cgo — mingw-w64 GCC ld links the .a and
+          # there is no runtime DLL to place next to the exe (PE has no
+          # rpath) — and a standalone cdylib (tulip_rs_ffi.dll) for the Java
+          # Panama-FFM binding, which cannot load a .a. crt-static embeds the
+          # mingw CRT, libgcc and winpthread so the DLL needs no runtime
+          # DLLs on the user's machine. Cross-compiled from Linux — no
+          # Windows runner needed. Both are large, so strip debug info and
+          # ship tar.gz'd.
           # windows-arm64 is intentionally absent: no GH runners, and MSVC
           # toolchain interop with cgo is not worth it; use --source there.
           - name: windows-amd64
             runs_on: ubuntu-24.04
-            rustflags: "-C target-cpu=x86-64-v3"
+            rustflags: "-C target-cpu=x86-64-v3 -C target-feature=+crt-static"
             cargo_target: x86_64-pc-windows-gnu
-            lib: libtulip_rs_ffi.a
+            lib: libtulip_rs_ffi.a tulip_rs_ffi.dll
             strip_bin: x86_64-w64-mingw32-strip
 
     name: prebuilt ${{ matrix.name }}
@@ -84,7 +88,9 @@ jobs:
       - name: Package
         run: |
           mkdir -p pkg/lib pkg/include
-          cp "target/${{ matrix.cargo_target }}/release/${{ matrix.lib }}" pkg/lib/
+          for f in ${{ matrix.lib }}; do
+            cp "target/${{ matrix.cargo_target }}/release/$f" pkg/lib/
+          done
           cp include/*.h pkg/include/
           STRIP="${{ matrix.strip_bin || 'strip' }}"
           "$STRIP" -S pkg/lib/* 2>/dev/null || "$STRIP" pkg/lib/* 2>/dev/null || true

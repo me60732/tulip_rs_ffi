@@ -1,6 +1,6 @@
 [package]
 name = "tulip_rs_ffi"
-version = "0.2.9"
+version = "0.2.10"
 edition = "2021"
 description = "Hand-rolled extern \"C\" FFI wrapper around the tulip_rs core indicator library"
 license = "MIT"
@@ -15,7 +15,7 @@ crate-type = ["cdylib", "staticlib", "lib"]
 
 [dependencies]
 # For local co-development against the core workspace, swap back to:
-tulip_rs = { version = "0.2.9", default-features = false, features = ["simd_assets", "simd_options"] }
+tulip_rs = { version = "0.2.10", default-features = false, features = ["simd_assets", "simd_options"] }
 #tulip_rs = { path = "../tulip_rs/tulip_rs", default-features = false, features = ["simd_assets", "simd_options"] }
 
 # Serialization/deserialization for indicator state (opaque bytes for GC bindings)
@@ -29,7 +29,7 @@ serde_json = "1"
 # from ever drifting out of sync with the core crate (see build.rs for
 # details).
 [build-dependencies]
-tulip_rs = { version = "0.2.9", default-features = true }
+tulip_rs = { version = "0.2.10", default-features = true }
 #tulip_rs = { path = "../tulip_rs/tulip_rs", default-features = true }
 
 # Match the release profile of the tulip_rs workspace (../tulip_rs/Cargo.toml)
